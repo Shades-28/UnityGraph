@@ -4,36 +4,56 @@ build-backend = "hatchling.build"
 
 [project]
 name = "unitygraph"
-version = "0.0.1"
+version = "1.0.0"
 description = "Autonomous Unity developer system for Claude Code — knowledge graph, context injection, and behavior model."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "RinvalAI" }]
-keywords = ["unity", "claude", "mcp", "knowledge-graph", "llm"]
+keywords = ["unity", "claude", "mcp", "knowledge-graph", "llm", "game-development"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Software Development :: Build Tools",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
 ]
 dependencies = [
+    # Layer 1 only — the graph builder + MCP server.
     "pyyaml>=6.0",
     "tree-sitter>=0.21",
     "tree-sitter-c-sharp>=0.21",
     "mcp>=1.0",
     "click>=8.1",
-    "tiktoken>=0.7",
 ]
 
 [project.optional-dependencies]
+# Layer 2 — context injection (tiktoken for budget, no other new deps).
+inject = [
+    "tiktoken>=0.7",
+]
+# Layer 3 — observation + pattern map. SQLite is stdlib. No new runtime deps.
+behavior = []
+# UnityBench eval harness — needs the Anthropic SDK for real-API runs.
+evals = [
+    "anthropic>=0.40",
+]
+# Everything.
+full = [
+    "tiktoken>=0.7",
+    "anthropic>=0.40",
+]
 dev = [
     "pytest>=8.0",
     "pytest-cov>=5.0",
     "ruff>=0.6",
     "mypy>=1.11",
     "types-PyYAML",
+    "tiktoken>=0.7",
+    "anthropic>=0.40",
 ]
 
 [project.scripts]
