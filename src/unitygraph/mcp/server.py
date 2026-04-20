@@ -59,6 +59,43 @@ def build_server(graph_path: Path) -> FastMCP:
     def get_event_connections(gameobject_name: str) -> dict[str, Any]:
         return gtools.get_event_connections(graph, gameobject_name)
 
+    @server.tool(
+        description=(
+            "Return the prefab variant inheritance chain. Reports each step from the "
+            "given prefab up to the base, plus any recorded field overrides."
+        )
+    )
+    def get_prefab_chain(prefab_name: str) -> dict[str, Any]:
+        return gtools.get_prefab_chain(graph, prefab_name)
+
+    @server.tool(
+        description=(
+            "BFS N-hop neighborhood around a node id or name. Use this to see "
+            "everything within 1-3 hops of a given entity."
+        )
+    )
+    def get_neighbors(node_id: str, hops: int = 1) -> dict[str, Any]:
+        return gtools.get_neighbors(graph, node_id, hops)
+
+    @server.tool(
+        description=(
+            "Shortest path between two nodes (ids or names). Returns the node "
+            "sequence and the edge types traversed."
+        )
+    )
+    def shortest_path(from_id: str, to_id: str) -> dict[str, Any]:
+        return gtools.shortest_path(graph, from_id, to_id)
+
+    @server.tool(
+        description=(
+            "Simple natural-language graph query — extracts entity tokens from "
+            "the text, finds matching nodes, returns their 2-hop subgraph. "
+            "For token-budgeted retrieval (Layer 2), use inject_context instead."
+        )
+    )
+    def query_graph(natural_language_query: str, max_nodes: int = 50) -> dict[str, Any]:
+        return gtools.query_graph(graph, natural_language_query, max_nodes)
+
     return server
 
 

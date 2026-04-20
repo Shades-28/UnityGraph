@@ -18,6 +18,7 @@ import click
 
 from unitygraph import __version__
 from unitygraph.build.builder import build_project
+from unitygraph.build.cache import ParseCache
 
 
 @click.group(help="UnityGraph — autonomous Unity developer system for Claude Code.")
@@ -35,12 +36,31 @@ def main() -> None:
     default=None,
     help="Output directory (default: <project>/graph-out).",
 )
+@click.option(
+    "--update",
+    is_flag=True,
+    help="Incremental build: reuse cached parser output for files unchanged since the last build.",
+)
 @click.option("-v", "--verbose", is_flag=True, help="Print per-file warnings as they occur.")
-def build(project_path: str, output: str | None, verbose: bool) -> None:
+def build(project_path: str, output: str | None, update: bool, verbose: bool) -> None:
     project = Path(project_path).resolve()
     out_dir = Path(output).resolve() if output else project / "graph-out"
-    click.echo(f"Building graph for {project} -> {out_dir}", err=True)
-    result = build_project(project)
+    cache_dir = out_dir / ".parse_cache"
+
+    cache: ParseCache | None = None
+    if update:
+        cache = ParseCache.load(cache_dir)
+        click.echo(
+            f"Building graph (incremental, cached={len(cache.entries)} entries) "
+            f"for {project} -> {out_dir}",
+            err=True,
+        )
+    else:
+        click.echo(f"Building graph for {project} -> {out_dir}", err=True)
+    result = build_project(project, cache=cache)
+
+    if cache is not None:
+        cache.write()
 
     out_path = out_dir / "graph.json"
     result.graph.write(out_path)

@@ -203,6 +203,238 @@ def find_script_usages(graph: Graph, script_name: str) -> dict[str, Any]:
     return {"script_name": script_name, "found": True, "usages": usages, "count": len(usages)}
 
 
+def get_prefab_chain(graph: Graph, prefab_name: str) -> dict[str, Any]:
+    """Return the full variant inheritance chain for a prefab.
+
+    Walks ``is_variant_of`` edges from the given prefab up to the root base.
+    The chain is reported in order [variant, ..., base].
+    """
+    key = _norm(prefab_name)
+    nodes_by_id = graph.nodes_by_id()
+    matches = [
+        n for n in graph.nodes if n.type == "Prefab" and _norm(str(n.data.get("name", ""))) == key
+    ]
+    if not matches:
+        return {"prefab_name": prefab_name, "found": False, "chains": []}
+
+    # Map source -> first is_variant_of target
+    parent_of: dict[str, str] = {}
+    overrides_by_from: dict[str, list[dict[str, Any]]] = {}
+    for edge in graph.edges:
+        if edge.type == "is_variant_of":
+            parent_of.setdefault(edge.from_id, edge.to_id)
+        elif edge.type == "overrides":
+            overrides_by_from.setdefault(edge.from_id, []).append(
+                {
+                    "target_file_id": edge.data.get("target_file_id"),
+                    "property_path": edge.data.get("property_path"),
+                    "value": edge.data.get("value"),
+                }
+            )
+
+    chains: list[dict[str, Any]] = []
+    for leaf in matches:
+        chain_ids: list[str] = [leaf.id]
+        seen = {leaf.id}
+        cur = leaf.id
+        while cur in parent_of:
+            nxt = parent_of[cur]
+            if nxt in seen:  # cycle guard
+                break
+            chain_ids.append(nxt)
+            seen.add(nxt)
+            cur = nxt
+        chain_nodes = [nodes_by_id[pid].to_json() for pid in chain_ids if pid in nodes_by_id]
+        chains.append(
+            {
+                "chain": chain_nodes,
+                "depth": len(chain_nodes),
+                "overrides": overrides_by_from.get(leaf.id, []),
+            }
+        )
+    return {"prefab_name": prefab_name, "found": True, "chains": chains}
+
+
+def get_neighbors(graph: Graph, node_id: str, hops: int = 1) -> dict[str, Any]:
+    """BFS from ``node_id`` out to ``hops`` depth, undirected over all edge types."""
+    if hops < 0:
+        hops = 0
+    nodes_by_id = graph.nodes_by_id()
+    if node_id not in nodes_by_id:
+        # Try a case-insensitive name match as a fallback.
+        key = _norm(node_id)
+        candidate = next(
+            (n for n in graph.nodes if _norm(str(n.data.get("name", ""))) == key),
+            None,
+        )
+        if candidate is None:
+            return {"node_id": node_id, "found": False, "neighbors": []}
+        node_id = candidate.id
+
+    # Build undirected adjacency on-demand.
+    adjacency: dict[str, list[tuple[str, str]]] = {}
+    for edge in graph.edges:
+        adjacency.setdefault(edge.from_id, []).append((edge.to_id, edge.type))
+        adjacency.setdefault(edge.to_id, []).append((edge.from_id, edge.type))
+
+    depth_by_id: dict[str, int] = {node_id: 0}
+    frontier = [node_id]
+    for _ in range(hops):
+        next_frontier: list[str] = []
+        for nid in frontier:
+            for nbr, _edge_type in adjacency.get(nid, ()):
+                if nbr not in depth_by_id:
+                    depth_by_id[nbr] = depth_by_id[nid] + 1
+                    next_frontier.append(nbr)
+        frontier = next_frontier
+
+    result_nodes = []
+    for nid, depth in depth_by_id.items():
+        if nid == node_id:
+            continue
+        node = nodes_by_id.get(nid)
+        if node is None:
+            continue
+        entry = node.to_json()
+        entry["_hop"] = depth
+        result_nodes.append(entry)
+    result_nodes.sort(key=lambda r: (r["_hop"], r.get("type", "")))
+
+    return {
+        "node_id": node_id,
+        "found": True,
+        "root": nodes_by_id[node_id].to_json() if node_id in nodes_by_id else None,
+        "hops": hops,
+        "neighbor_count": len(result_nodes),
+        "neighbors": result_nodes,
+    }
+
+
+def shortest_path(graph: Graph, from_id: str, to_id: str) -> dict[str, Any]:
+    """BFS shortest path between two nodes (undirected)."""
+    nodes_by_id = graph.nodes_by_id()
+    # Fallback: resolve either endpoint by name.
+    resolved_from = _resolve_id(graph, from_id, nodes_by_id)
+    resolved_to = _resolve_id(graph, to_id, nodes_by_id)
+    if resolved_from is None or resolved_to is None:
+        return {"found": False, "reason": "endpoint not in graph"}
+    from_id = resolved_from
+    to_id = resolved_to
+    if from_id == to_id:
+        return {"found": True, "path": [nodes_by_id[from_id].to_json()], "hops": 0}
+
+    adjacency: dict[str, list[tuple[str, str]]] = {}
+    for edge in graph.edges:
+        adjacency.setdefault(edge.from_id, []).append((edge.to_id, edge.type))
+        adjacency.setdefault(edge.to_id, []).append((edge.from_id, edge.type))
+
+    prev: dict[str, tuple[str, str]] = {}
+    seen = {from_id}
+    queue: list[str] = [from_id]
+    while queue:
+        nid = queue.pop(0)
+        if nid == to_id:
+            break
+        for nbr, etype in adjacency.get(nid, ()):
+            if nbr in seen:
+                continue
+            seen.add(nbr)
+            prev[nbr] = (nid, etype)
+            queue.append(nbr)
+
+    if to_id not in seen:
+        return {"found": False, "reason": "no path"}
+
+    # Reconstruct
+    path_ids: list[str] = [to_id]
+    edge_types: list[str] = []
+    cur = to_id
+    while cur in prev:
+        parent, etype = prev[cur]
+        path_ids.append(parent)
+        edge_types.append(etype)
+        cur = parent
+    path_ids.reverse()
+    edge_types.reverse()
+    return {
+        "found": True,
+        "from": from_id,
+        "to": to_id,
+        "hops": len(path_ids) - 1,
+        "path": [nodes_by_id[pid].to_json() for pid in path_ids if pid in nodes_by_id],
+        "edge_types": edge_types,
+    }
+
+
+def query_graph(
+    graph: Graph,
+    natural_language_query: str,
+    max_nodes: int = 50,
+) -> dict[str, Any]:
+    """Simple keyword + name matching against the graph.
+
+    Extracts PascalCase/snake_case tokens from the query, matches them against
+    node names, then returns the 2-hop neighborhood of the best matches,
+    capped at ``max_nodes``. A real retrieval engine (entity-hop / task-type /
+    full-neighborhood) lives in Layer 2 — this is the minimal MCP tool so
+    Claude Code can reach the graph during early sessions.
+    """
+    import re
+
+    tokens = set(re.findall(r"[A-Za-z_][A-Za-z0-9_]{2,}", natural_language_query))
+    if not tokens:
+        return {"query": natural_language_query, "tokens": [], "matches": []}
+    lowered = {t.lower() for t in tokens}
+
+    matched: list[str] = []
+    for n in graph.nodes:
+        name = str(n.data.get("name", ""))
+        if name and name.lower() in lowered:
+            matched.append(n.id)
+
+    if not matched:
+        return {"query": natural_language_query, "tokens": sorted(tokens), "matches": []}
+
+    # 2-hop expansion, union across all matches.
+    nodes_by_id = graph.nodes_by_id()
+    adjacency: dict[str, list[str]] = {}
+    for edge in graph.edges:
+        adjacency.setdefault(edge.from_id, []).append(edge.to_id)
+        adjacency.setdefault(edge.to_id, []).append(edge.from_id)
+
+    seen: set[str] = set(matched)
+    frontier = list(matched)
+    for _ in range(2):
+        next_frontier: list[str] = []
+        for nid in frontier:
+            for nbr in adjacency.get(nid, ()):
+                if nbr not in seen:
+                    seen.add(nbr)
+                    next_frontier.append(nbr)
+        frontier = next_frontier
+        if len(seen) >= max_nodes:
+            break
+
+    sub_nodes = [nodes_by_id[nid].to_json() for nid in list(seen)[:max_nodes] if nid in nodes_by_id]
+    return {
+        "query": natural_language_query,
+        "tokens": sorted(tokens),
+        "seed_matches": matched,
+        "nodes": sub_nodes,
+        "node_count": len(sub_nodes),
+    }
+
+
+def _resolve_id(graph: Graph, maybe_id_or_name: str, nodes_by_id: dict[str, Any]) -> str | None:
+    if maybe_id_or_name in nodes_by_id:
+        return maybe_id_or_name
+    key = _norm(maybe_id_or_name)
+    for n in graph.nodes:
+        if _norm(str(n.data.get("name", ""))) == key:
+            return n.id
+    return None
+
+
 def get_event_connections(graph: Graph, gameobject_name: str) -> dict[str, Any]:
     """UnityEvent connections originating from or landing on ``gameobject_name``."""
     go_matches = _gameobject_nodes(graph, gameobject_name)

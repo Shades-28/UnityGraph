@@ -20,9 +20,18 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
 
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION = "1.1"
 
-NodeType = Literal["Script", "GameObject", "Component", "Scene", "Prefab"]
+NodeType = Literal[
+    "Script",
+    "GameObject",
+    "Component",
+    "Scene",
+    "Prefab",
+    "AnimState",
+    "AnimatorController",
+    "ShaderGraph",
+]
 EdgeType = Literal[
     "attached_to",
     "co_exists_with",
@@ -35,6 +44,9 @@ EdgeType = Literal[
     "overrides",
     "transitions_to",
     "loads_scene",
+    "contains_state",
+    "has_animator",
+    "uses_subgraph",
 ]
 
 
@@ -181,3 +193,15 @@ def make_gameobject_id(scope_id: str, file_id: int, name: str) -> str:
 
 def make_component_id(owner_go_id: str, file_id: int, component_type: str) -> str:
     return f"comp::{owner_go_id}::{file_id}::{component_type}"
+
+
+def make_animator_id(controller_name: str, rel_path: str) -> str:
+    return f"anim::{controller_name}::{rel_path}"
+
+
+def make_animstate_id(controller_id: str, state_file_id: int, state_name: str) -> str:
+    return f"animstate::{controller_id}::{state_file_id}::{state_name}"
+
+
+def make_shadergraph_id(name: str, rel_path: str) -> str:
+    return f"shader::{name}::{rel_path}"
