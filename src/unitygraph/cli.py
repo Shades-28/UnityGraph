@@ -198,7 +198,7 @@ def inject(
 )
 @click.option("--note", default="", help="Free-form note attached to the feedback event.")
 def feedback(verdict: str, project_path: str, session_id: str | None, note: str) -> None:
-    from unitygraph.behavior import observer
+    from unitygraph.behavior import extractor, observer, patterns, schema
 
     project = Path(project_path).resolve()
     target = session_id or _latest_session_id(project)
@@ -207,7 +207,23 @@ def feedback(verdict: str, project_path: str, session_id: str | None, note: str)
         sys.exit(2)
 
     observer.record_feedback(str(project), target, verdict, note=note)
-    click.echo(f"recorded feedback ({verdict}) for session {target}")
+
+    # Feed through the extractor so pattern confidences update immediately.
+    events = schema.iter_session_events(project, target)
+    injection = next(
+        (e for e in reversed(events) if e.get("event_type") == "injection"),
+        None,
+    )
+    matched: list[str] = []
+    if injection is not None:
+        with patterns.open_store(project) as store:
+            result = extractor.extract_from_feedback(store, injection, verdict)
+            matched = result.matched_pattern_ids
+
+    msg = f"recorded feedback ({verdict}) for session {target}"
+    if matched:
+        msg += f"; updated {len(matched)} pattern(s): {', '.join(matched)}"
+    click.echo(msg)
 
 
 def _latest_session_id(project_root: Path) -> str | None:
@@ -260,6 +276,94 @@ def patterns_list(project_path: str, limit: int) -> None:
         else:
             detail = ""
         click.echo(f"[{ts}] {etype:12} {sid:16} {detail}")
+
+
+@patterns.command("show", help="Show the failure-pattern map.")
+@click.option(
+    "--project",
+    "project_path",
+    type=click.Path(exists=True, file_okay=False),
+    default=".",
+)
+@click.option(
+    "--status",
+    type=click.Choice(["observed", "active", "archived", "all"]),
+    default="all",
+)
+def patterns_show(project_path: str, status: str) -> None:
+    from unitygraph.behavior.patterns import open_store
+
+    project = Path(project_path).resolve()
+    status_filter = None if status == "all" else status
+    with open_store(project) as store:
+        rows = store.list_all(status=status_filter)
+    if not rows:
+        click.echo("(no patterns)")
+        return
+    click.echo(f"{'pattern_id':32} {'status':10} {'conf':>5} {'ev':>4}  {'mc_type':20}  rule")
+    for p in rows:
+        click.echo(
+            f"{p.pattern_id:32} {p.status:10} "
+            f"{p.confidence:5.2f} {p.evidence_count:4d}  "
+            f"{p.missing_context_type:20}  {p.injection_rule}"
+        )
+
+
+@patterns.command("promote", help="Manually promote a pattern to active.")
+@click.argument("pattern_id")
+@click.option(
+    "--project",
+    "project_path",
+    type=click.Path(exists=True, file_okay=False),
+    default=".",
+)
+def patterns_promote(pattern_id: str, project_path: str) -> None:
+    from unitygraph.behavior.patterns import open_store
+
+    project = Path(project_path).resolve()
+    with open_store(project) as store:
+        pat = store.promote(pattern_id)
+    if pat is None:
+        click.echo(f"no such pattern: {pattern_id}", err=True)
+        sys.exit(2)
+    click.echo(f"promoted {pattern_id} -> status=active")
+
+
+@patterns.command("stats", help="Print summary statistics about the pattern map.")
+@click.option(
+    "--project",
+    "project_path",
+    type=click.Path(exists=True, file_okay=False),
+    default=".",
+)
+def patterns_stats(project_path: str) -> None:
+    from unitygraph.behavior.patterns import open_store
+
+    project = Path(project_path).resolve()
+    with open_store(project) as store:
+        stats = store.stats()
+    click.echo(f"patterns: {stats['total']}")
+    click.echo(f"mean_confidence: {stats['mean_confidence']}")
+    click.echo(f"by_status: {stats['by_status']}")
+    click.echo(f"by_missing_context_type: {stats['by_missing_context_type']}")
+
+
+@patterns.command("replay", help="Replay all session logs through the extractor.")
+@click.option(
+    "--project",
+    "project_path",
+    type=click.Path(exists=True, file_okay=False),
+    default=".",
+)
+def patterns_replay(project_path: str) -> None:
+    from unitygraph.behavior import extractor, schema
+    from unitygraph.behavior import patterns as pmod
+
+    project = Path(project_path).resolve()
+    events = schema.iter_all_events(project)
+    with pmod.open_store(project) as store:
+        n = extractor.replay_session_log(store, events)
+    click.echo(f"processed {n} feedback events")
 
 
 if __name__ == "__main__":
