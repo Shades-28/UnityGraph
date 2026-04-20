@@ -35,7 +35,7 @@ except ImportError:  # pragma: no cover
     anthropic = None  # type: ignore[assignment]
 
 
-CONDITIONS = ("baseline", "manual_visual", "unitygraph")
+CONDITIONS = ("baseline", "manual_visual", "unitygraph", "unitygraph_adaptive")
 
 SYSTEM_PROMPT = (
     "You are an expert Unity C# developer. The user gives you a task description "
@@ -54,7 +54,7 @@ def build_prompt(task: Task, condition: str) -> tuple[str, int]:
     if condition == "manual_visual":
         prompt = build_condition_manual_visual(task)
         return prompt, 0  # Not counted — it's an "oracle" human proxy.
-    if condition == "unitygraph":
+    if condition in ("unitygraph", "unitygraph_adaptive"):
         from unitygraph.build.graph import Graph
         from unitygraph.inject.engine import inject_context
 
@@ -62,7 +62,11 @@ def build_prompt(task: Task, condition: str) -> tuple[str, int]:
         if not task.graph_path.exists():
             return base, 0
         graph = Graph.load(task.graph_path)
-        injection = inject_context(graph, task.task_text)
+        injection = inject_context(
+            graph,
+            task.task_text,
+            adaptive=(condition == "unitygraph_adaptive"),
+        )
         return base + "\n\n" + injection.block, injection.token_count
     raise ValueError(f"unknown condition: {condition}")
 

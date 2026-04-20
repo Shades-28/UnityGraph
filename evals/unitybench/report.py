@@ -56,7 +56,7 @@ def summarize(rows: list[dict[str, Any]]) -> dict[tuple[int, str], dict[str, flo
 
 
 def _format_table(summary: dict[tuple[int, str], dict[str, float]], tiers: list[int]) -> str:
-    conditions = ("baseline", "manual_visual", "unitygraph")
+    conditions = ("baseline", "manual_visual", "unitygraph", "unitygraph_adaptive")
     lines: list[str] = []
 
     for metric in METRICS:
@@ -71,27 +71,42 @@ def _format_table(summary: dict[tuple[int, str], dict[str, float]], tiers: list[
             for cond in conditions:
                 val = summary.get((tier, cond), {}).get(metric)
                 vals[cond] = val if isinstance(val, (int, float)) else 0.0
-                row.append(f"{val:.3f}" if val is not None else "—")
+                row.append(f"{val:.3f}" if val is not None else "-")
             delta = vals["unitygraph"] - vals["baseline"]
             row.append(f"{delta:+.3f}")
             lines.append("| " + " | ".join(row) + " |")
 
-    # Headline claim: Tier 2 runtime correctness improvement.
+    # Headline — I5 gate (static L2 vs baseline) and I9 gate (adaptive L3 vs static L2).
     tier2_baseline = summary.get((2, "baseline"), {}).get("runtime_correctness", 0.0)
     tier2_ug = summary.get((2, "unitygraph"), {}).get("runtime_correctness", 0.0)
-    delta_t2 = tier2_ug - tier2_baseline
-    pct = (tier2_ug / tier2_baseline - 1.0) * 100 if tier2_baseline else 0.0
+    tier2_adaptive = summary.get((2, "unitygraph_adaptive"), {}).get("runtime_correctness", 0.0)
+    pct_i5 = (tier2_ug / tier2_baseline - 1.0) * 100 if tier2_baseline else 0.0
+
     lines.append("\n## Headline")
     lines.append(
         f"Tier 2 runtime correctness: baseline={tier2_baseline:.3f}, "
-        f"unitygraph={tier2_ug:.3f} (Delta={delta_t2:+.3f}, {pct:+.1f}%)"
+        f"unitygraph={tier2_ug:.3f} (Delta={tier2_ug - tier2_baseline:+.3f}, "
+        f"{pct_i5:+.1f}%)"
     )
-    if tier2_baseline > 0 and pct >= 30.0:
-        lines.append("Plan §I5 gate: PASS (≥30% improvement on Tier 2)")
+    if tier2_baseline > 0 and pct_i5 >= 30.0:
+        lines.append("Plan §I5 gate: PASS (>= 30% improvement on Tier 2)")
     elif tier2_baseline == 0 and tier2_ug > 0:
         lines.append("Plan §I5 gate: PASS (non-zero Tier 2 improvement from zero baseline)")
     else:
-        lines.append("Plan §I5 gate: FAIL (<30% improvement)")
+        lines.append("Plan §I5 gate: FAIL (< 30% improvement)")
+
+    if tier2_adaptive > 0:
+        pct_i9 = ((tier2_adaptive / tier2_ug) - 1.0) * 100 if tier2_ug > 0 else 0.0
+        lines.append(
+            f"Tier 2 adaptive vs static: unitygraph={tier2_ug:.3f}, "
+            f"unitygraph_adaptive={tier2_adaptive:.3f} (Delta="
+            f"{tier2_adaptive - tier2_ug:+.3f}, {pct_i9:+.1f}%)"
+        )
+        # Plan §I9 gate: at least 5pp absolute improvement over static L2 on Tier 2.
+        if (tier2_adaptive - tier2_ug) >= 0.05:
+            lines.append("Plan §I9 gate: PASS (>= 5pp absolute improvement over static L2)")
+        else:
+            lines.append("Plan §I9 gate: FAIL (< 5pp improvement over static L2)")
     return "\n".join(lines)
 
 
