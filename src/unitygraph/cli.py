@@ -91,6 +91,52 @@ def serve(graph_path: str) -> None:
     run_stdio_server(Path(graph_path).resolve())
 
 
+@main.command(
+    help="Initialize UnityGraph in a Unity project — writes CLAUDE.md, .mcp.json, and the Claude skill."
+)
+@click.argument("project_path", type=click.Path(exists=True, file_okay=False), default=".")
+@click.option("--force", is_flag=True, help="Overwrite existing files.")
+@click.option(
+    "--no-skill",
+    is_flag=True,
+    help="Skip writing .claude/skills/unity-aware (useful for minimal installs).",
+)
+def init(project_path: str, force: bool, no_skill: bool) -> None:
+    project = Path(project_path).resolve()
+    templates = Path(__file__).parent / "templates"
+
+    targets: list[tuple[Path, Path]] = [
+        (templates / "CLAUDE.md", project / "CLAUDE.md"),
+        (templates / ".mcp.json", project / ".mcp.json"),
+    ]
+    if not no_skill:
+        targets.append(
+            (
+                templates / "skills" / "unity-aware" / "SKILL.md",
+                project / ".claude" / "skills" / "unity-aware" / "SKILL.md",
+            )
+        )
+
+    for source, target in targets:
+        if target.exists() and not force:
+            click.echo(
+                f"skip (exists): {target.relative_to(project)}  (use --force to overwrite)",
+                err=True,
+            )
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+        click.echo(f"wrote {target.relative_to(project)}")
+
+    if not (project / "graph-out" / "graph.json").exists():
+        click.echo(
+            "\nnext: run `unitygraph build .` to produce graph-out/graph.json. "
+            "Claude Code will pick up the MCP server automatically on the next "
+            "session in this folder.",
+            err=True,
+        )
+
+
 @main.command(help="Generate a UNITYGRAPH CONTEXT block for a task.")
 @click.argument("task_text")
 @click.option(
