@@ -7,16 +7,31 @@ script references back to a concrete ``.cs`` file.
 
 from __future__ import annotations
 
+import re
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Mapping
 
 import yaml
+
+# Meta files are simple: `guid: <32-hex-chars>` appears on a top-level line
+# near the top. Full YAML parsing of every meta file in a large project
+# (20k+ files) is a measurable hot path, so we try a cheap regex first and
+# fall back to yaml.safe_load only if the file is unusual.
+_GUID_RE = re.compile(r"^guid:\s*([a-fA-F0-9]{32})\s*$", re.MULTILINE)
 
 
 def load_meta_guid(meta_path: Path) -> str | None:
     try:
-        payload = yaml.safe_load(meta_path.read_text(encoding="utf-8", errors="replace"))
-    except (OSError, yaml.YAMLError):
+        text = meta_path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    m = _GUID_RE.search(text)
+    if m:
+        return m.group(1)
+    # Rare fallback: unusual whitespace or quoted guid.
+    try:
+        payload = yaml.safe_load(text)
+    except yaml.YAMLError:
         return None
     if not isinstance(payload, dict):
         return None
@@ -27,21 +42,18 @@ def load_meta_guid(meta_path: Path) -> str | None:
 def build_guid_index(project_root: Path) -> dict[str, Path]:
     """Walk ``project_root`` for ``.meta`` files and build a guid → asset-path map.
 
-    The asset path returned is the file *without* the ``.meta`` suffix. Meta
-    files reference assets that may or may not exist on disk — missing assets
-    are skipped silently.
+    The asset path returned is the file *without* the ``.meta`` suffix.
+    We do NOT stat the asset path — on large projects the per-file syscall
+    is a measurable hotspot, and a stale asset path is harmless: lookups
+    against the index will return a path that doesn't resolve, which the
+    caller already has to handle anyway.
     """
     index: dict[str, Path] = {}
     for meta in project_root.rglob("*.meta"):
-        asset = meta.with_suffix("")  # strips the .meta suffix
-        # .cs.meta -> Foo.cs.meta.with_suffix('') = Foo.cs  (good)
-        # Some meta files stem on folders; we accept either.
-        if not asset.exists():
-            # Folder metas have path `Foo/.meta` style; skip.
-            continue
         guid = load_meta_guid(meta)
-        if guid:
-            index[guid] = asset
+        if not guid:
+            continue
+        index[guid] = meta.with_suffix("")
     return index
 
 

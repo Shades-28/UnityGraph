@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
 
@@ -45,7 +45,11 @@ class Node:
     data: dict[str, Any] = field(default_factory=dict)
 
     def to_json(self) -> dict[str, Any]:
-        return {"id": self.id, "type": self.type, **{k: v for k, v in self.data.items() if k not in {"id", "type"}}}
+        return {
+            "id": self.id,
+            "type": self.type,
+            **{k: v for k, v in self.data.items() if k not in {"id", "type"}},
+        }
 
 
 @dataclass
@@ -71,13 +75,11 @@ class Graph:
     nodes: list[Node] = field(default_factory=list)
     edges: list[Edge] = field(default_factory=list)
     schema_version: str = SCHEMA_VERSION
-    generated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    generated_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
     build_ms: int = 0
 
     _node_ids: set[str] = field(default_factory=set, init=False, repr=False)
-    _script_ids_by_name: dict[str, list[str]] = field(
-        default_factory=dict, init=False, repr=False
-    )
+    _script_ids_by_name: dict[str, list[str]] = field(default_factory=dict, init=False, repr=False)
 
     def add_node(self, node: Node) -> None:
         if node.id in self._node_ids:
@@ -88,6 +90,18 @@ class Graph:
             name = str(node.data.get("name", ""))
             if name:
                 self._script_ids_by_name.setdefault(name, []).append(node.id)
+
+    def try_add_node(self, node: Node) -> bool:
+        """Add a node if its id is unique; return False on collision.
+
+        Used during project-wide builds where real Unity projects occasionally
+        produce duplicate names (asset packs, multi-class .cs files). Callers
+        that need strict behavior should use ``add_node``.
+        """
+        if node.id in self._node_ids:
+            return False
+        self.add_node(node)
+        return True
 
     def add_edge(self, edge: Edge) -> None:
         # Edges can repeat across builds; we dedupe on (from, to, type).

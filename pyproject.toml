@@ -67,4 +67,7 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra --strict-markers"
+addopts = "-ra --strict-markers -m 'not slow'"
+markers = [
+    "slow: long-running tests (Graudation-Saga stress test and similar). Run with `pytest -m slow`.",
+]

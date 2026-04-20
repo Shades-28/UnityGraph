@@ -17,7 +17,8 @@ from pathlib import Path
 from typing import Any
 
 import tree_sitter_c_sharp as tsc
-from tree_sitter import Language, Node as TSNode, Parser
+from tree_sitter import Language, Parser
+from tree_sitter import Node as TSNode
 
 _LANGUAGE = Language(tsc.language())
 _PARSER = Parser(_LANGUAGE)

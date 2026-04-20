@@ -53,10 +53,12 @@ def build(project_path: str, output: str | None, verbose: bool) -> None:
         err=True,
     )
     if report.warnings:
-        click.echo(f"  warnings: {len(report.warnings)}", err=True)
+        tallies = report.tallies()
+        summary = "  ".join(f"{cat}={n}" for cat, n in sorted(tallies.items()))
+        click.echo(f"  warnings: {len(report.warnings)}  ({summary})", err=True)
         if verbose:
             for w in report.warnings:
-                click.echo(f"    ! {w}", err=True)
+                click.echo(f"    ! [{w.category}] {w.path}: {w.message}", err=True)
     click.echo(f"Wrote {out_path}")
 
 

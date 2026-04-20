@@ -23,7 +23,6 @@ from typing import Any
 
 from .unity_yaml import UnityDoc, load_documents
 
-
 # Unity classID → friendly component-type name for the graph.
 BUILTIN_COMPONENT_TYPES: dict[int, str] = {
     4: "Transform",
@@ -77,7 +76,7 @@ class SceneComponent:
     gameobject_file_id: int | None
     inspector_values: dict[str, Any] = field(default_factory=dict)
     script_guid: str | None = None  # only for MonoBehaviour
-    event_connections: list["EventConnection"] = field(default_factory=list)
+    event_connections: list[EventConnection] = field(default_factory=list)
 
 
 @dataclass
@@ -207,7 +206,19 @@ def _ingest_component(scene: ParsedScene, doc: UnityDoc) -> None:
         inspector = {
             k: v
             for k, v in doc.body.items()
-            if k not in {"m_ObjectHideFlags", "m_CorrespondingSourceObject", "m_PrefabInstance", "m_PrefabAsset", "m_GameObject", "m_Enabled", "m_EditorHideFlags", "m_Script", "m_Name", "m_EditorClassIdentifier"}
+            if k
+            not in {
+                "m_ObjectHideFlags",
+                "m_CorrespondingSourceObject",
+                "m_PrefabInstance",
+                "m_PrefabAsset",
+                "m_GameObject",
+                "m_Enabled",
+                "m_EditorHideFlags",
+                "m_Script",
+                "m_Name",
+                "m_EditorClassIdentifier",
+            }
         }
         comp.inspector_values = inspector
         comp.event_connections = _extract_event_connections(inspector)
@@ -232,7 +243,7 @@ def _ingest_prefab_instance(scene: ParsedScene, doc: UnityDoc) -> None:
         source_guid = str(guid) if guid else None
 
     overrides: list[PrefabOverride] = []
-    mods = (doc.body.get("m_Modification") or {})
+    mods = doc.body.get("m_Modification") or {}
     for mod in mods.get("m_Modifications", []) or []:
         if not isinstance(mod, dict):
             continue

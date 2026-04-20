@@ -26,9 +26,10 @@ The builder never crashes on a malformed file — errors are collected into
 from __future__ import annotations
 
 import time
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from .graph import (
     Edge,
@@ -45,14 +46,27 @@ from .parsers.scene_parser import SCRIPT_CLASS_ID, ParsedScene
 
 
 @dataclass
+class BuildWarning:
+    category: str  # cs_parser | scene_parser | prefab_parser | meta | duplicate_node
+    path: str
+    message: str
+
+
+@dataclass
 class BuildReport:
     n_cs: int = 0
     n_scenes: int = 0
     n_prefabs: int = 0
-    warnings: list[str] = field(default_factory=list)
+    warnings: list[BuildWarning] = field(default_factory=list)
 
-    def warn(self, message: str) -> None:
-        self.warnings.append(message)
+    def warn(self, category: str, path: str, message: str) -> None:
+        self.warnings.append(BuildWarning(category=category, path=path, message=message))
+
+    def tallies(self) -> dict[str, int]:
+        tally: dict[str, int] = {}
+        for w in self.warnings:
+            tally[w.category] = tally.get(w.category, 0) + 1
+        return tally
 
 
 @dataclass
@@ -84,8 +98,8 @@ def build_project(project_root: Path) -> BuildResult:
     for path in cs_files:
         try:
             parsed = cs_parser.parse_file(path)
-        except Exception as exc:  # noqa: BLE001 — parsing must never crash the build
-            report.warn(f"cs_parser failed on {path}: {exc}")
+        except Exception as exc:
+            report.warn("cs_parser", str(path), str(exc))
             continue
         parsed_scripts.append((path, parsed.classes))
         meta = path.with_suffix(path.suffix + ".meta")
@@ -110,7 +124,9 @@ def build_project(project_root: Path) -> BuildResult:
                     **klass.to_dict(),
                 },
             )
-            graph.add_node(node)
+            if not graph.try_add_node(node):
+                report.warn("duplicate_node", rel, f"Script node id already exists: {node.id}")
+                continue
             if klass.base_class and klass.base_class not in {
                 "MonoBehaviour",
                 "ScriptableObject",
@@ -139,41 +155,39 @@ def build_project(project_root: Path) -> BuildResult:
     for scene_path in scene_files:
         try:
             scene_parsed = scene_parser.parse_file(scene_path)
-        except Exception as exc:  # noqa: BLE001
-            report.warn(f"scene_parser failed on {scene_path}: {exc}")
+        except Exception as exc:
+            report.warn("scene_parser", str(scene_path), str(exc))
             continue
         rel = str(scene_path.relative_to(project_root))
         scene_id = make_scene_id(scene_path.stem, rel)
-        graph.add_node(
+        if not graph.try_add_node(
             Node(
                 id=scene_id,
                 type="Scene",
-                data={
-                    "name": scene_path.stem,
-                    "file_path": rel,
-                },
+                data={"name": scene_path.stem, "file_path": rel},
             )
-        )
+        ):
+            report.warn("duplicate_node", rel, f"Scene node id already exists: {scene_id}")
+            continue
         _ingest_scene(graph, scene_id, scene_parsed, script_class_by_guid, guid_index, report)
 
     for prefab_path in prefab_files:
         try:
             prefab_parsed = scene_parser.parse_file(prefab_path)
-        except Exception as exc:  # noqa: BLE001
-            report.warn(f"scene_parser failed on {prefab_path}: {exc}")
+        except Exception as exc:
+            report.warn("prefab_parser", str(prefab_path), str(exc))
             continue
         rel_pref = str(prefab_path.relative_to(project_root))
         prefab_id = make_prefab_id(prefab_path.stem, rel_pref)
-        graph.add_node(
+        if not graph.try_add_node(
             Node(
                 id=prefab_id,
                 type="Prefab",
-                data={
-                    "name": prefab_path.stem,
-                    "file_path": rel_pref,
-                },
+                data={"name": prefab_path.stem, "file_path": rel_pref},
             )
-        )
+        ):
+            report.warn("duplicate_node", rel_pref, f"Prefab node id already exists: {prefab_id}")
+            continue
         _ingest_scene(graph, prefab_id, prefab_parsed, script_class_by_guid, guid_index, report)
 
     # 6. Parse execution order → annotate Script nodes.
@@ -235,7 +249,7 @@ def _ingest_scene(
     for go in parsed.gameobjects:
         gid = make_gameobject_id(scope_id, go.file_id, go.name)
         go_id_by_fileid[go.file_id] = gid
-        graph.add_node(
+        if not graph.try_add_node(
             Node(
                 id=gid,
                 type="GameObject",
@@ -248,7 +262,9 @@ def _ingest_scene(
                     "file_id": go.file_id,
                 },
             )
-        )
+        ):
+            report.warn("duplicate_node", scope_id, f"GameObject node id already exists: {gid}")
+            continue
 
     # Emit Component nodes + attached_to edges.
     # Track MonoBehaviour fileID -> Script node id for event connection edges.
@@ -266,10 +282,14 @@ def _ingest_scene(
                 # Unknown script guid — maybe a third-party package script.
                 # Record a placeholder Script node so Inspector values are still queryable.
                 ext_rel = str(guid_index.get(comp.script_guid) or f"<external:{comp.script_guid}>")
-                unknown_name = Path(ext_rel).stem if ext_rel.endswith(".cs") else f"UnknownScript_{comp.script_guid[:8]}"
+                unknown_name = (
+                    Path(ext_rel).stem
+                    if ext_rel.endswith(".cs")
+                    else f"UnknownScript_{comp.script_guid[:8]}"
+                )
                 placeholder_id = make_script_id(unknown_name, ext_rel)
                 if not graph.has_node(placeholder_id):
-                    graph.add_node(
+                    graph.try_add_node(
                         Node(
                             id=placeholder_id,
                             type="Script",
@@ -302,7 +322,7 @@ def _ingest_scene(
             )
         else:
             cid = make_component_id(owner_id, comp.file_id, comp.type_name)
-            graph.add_node(
+            if graph.try_add_node(
                 Node(
                     id=cid,
                     type="Component",
@@ -314,8 +334,8 @@ def _ingest_scene(
                         "inspector_values": _scalarize(comp.inspector_values),
                     },
                 )
-            )
-            graph.add_edge(Edge(from_id=cid, to_id=owner_id, type="attached_to"))
+            ):
+                graph.add_edge(Edge(from_id=cid, to_id=owner_id, type="attached_to"))
 
     # Emit co_exists_with edges: every pair of components on the same GameObject.
     for go in parsed.gameobjects:
