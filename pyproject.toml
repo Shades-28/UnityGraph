@@ -1,0 +1,70 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "unitygraph"
+version = "0.0.1"
+description = "Autonomous Unity developer system for Claude Code — knowledge graph, context injection, and behavior model."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "RinvalAI" }]
+keywords = ["unity", "claude", "mcp", "knowledge-graph", "llm"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Build Tools",
+]
+dependencies = [
+    "pyyaml>=6.0",
+    "tree-sitter>=0.21",
+    "tree-sitter-c-sharp>=0.21",
+    "mcp>=1.0",
+    "click>=8.1",
+    "tiktoken>=0.7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "types-PyYAML",
+]
+
+[project.scripts]
+unitygraph = "unitygraph.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/rinvalai/unitygraph"
+Issues = "https://github.com/rinvalai/unitygraph/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/unitygraph"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "RUF"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["src/unitygraph"]
+warn_unused_ignores = true
+warn_redundant_casts = true
+
+[[tool.mypy.overrides]]
+module = ["tree_sitter.*", "tree_sitter_c_sharp.*", "mcp.*", "tiktoken.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"

@@ -1,0 +1,17 @@
+# Default: let Git handle line endings normally
+* text=auto
+
+# Unity YAML artifacts must stay LF — Unity is strict about this
+*.unity    text eol=lf
+*.prefab   text eol=lf
+*.asset    text eol=lf
+*.meta     text eol=lf
+*.controller text eol=lf
+*.shadergraph text eol=lf
+
+# Scripts: LF everywhere
+*.sh  text eol=lf
+*.ps1 text eol=crlf
+
+# Python: LF
+*.py  text eol=lf

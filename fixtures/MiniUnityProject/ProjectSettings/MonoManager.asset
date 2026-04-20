@@ -1,0 +1,16 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!5 &1
+MonoManager:
+  m_ObjectHideFlags: 0
+  m_Scripts: []
+  m_DefaultExecutionOrder:
+  - m_Type: 1
+    m_Value: -100
+    m_GUID: 11000000000000000000000000000002
+  - m_Type: 1
+    m_Value: 0
+    m_GUID: 11000000000000000000000000000001
+  - m_Type: 1
+    m_Value: 0
+    m_GUID: 11000000000000000000000000000003

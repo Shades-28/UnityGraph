@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# UnityGraph output
+graph-out/
+.unitygraph/
+
+# Claude / MCP runtime artifacts
+.claude/sessions/
+
+# Unity-side artifacts that might sneak into fixtures
+Library/
+Temp/
+Logs/
+UserSettings/
+MemoryCaptures/
+obj/
+Build/
+Builds/
+*.csproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
