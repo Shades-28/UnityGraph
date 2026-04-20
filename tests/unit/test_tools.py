@@ -62,8 +62,9 @@ def test_find_script_usages_enemy_ai(graph):
     # EnemyAI attached to one scene GO + one prefab GO
     assert out["count"] == 2
     go_scopes = {u["gameobject"]["scope"] for u in out["usages"]}
-    assert "scene::Main" in go_scopes
-    assert "prefab::Enemy" in go_scopes
+    # Scopes now include relative path suffix (to disambiguate duplicate stems)
+    assert any(s.startswith("scene::Main::") for s in go_scopes)
+    assert any(s.startswith("prefab::Enemy::") for s in go_scopes)
 
 
 def test_find_script_usages_player_controller_inspector(graph):

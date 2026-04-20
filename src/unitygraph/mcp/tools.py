@@ -43,19 +43,18 @@ def _script_nodes(graph: Graph, name: str) -> list[dict[str, Any]]:
 
 def _component_nodes_on(graph: Graph, gameobject_id: str) -> list[dict[str, Any]]:
     """Components (built-in and script) attached to ``gameobject_id``."""
+    nodes_by_id = graph.nodes_by_id()
     owners: list[dict[str, Any]] = []
     for edge in graph.edges:
         if edge.type != "attached_to" or edge.to_id != gameobject_id:
             continue
-        # edge.from is either a Script node or a Component node
-        for n in graph.nodes:
-            if n.id == edge.from_id:
-                entry = n.to_json()
-                # Attach the Inspector values that live on the edge (for scripts).
-                if edge.data.get("inspector_values"):
-                    entry = {**entry, "inspector_values": edge.data["inspector_values"]}
-                owners.append(entry)
-                break
+        node = nodes_by_id.get(edge.from_id)
+        if node is None:
+            continue
+        entry = node.to_json()
+        if edge.data.get("inspector_values"):
+            entry = {**entry, "inspector_values": edge.data["inspector_values"]}
+        owners.append(entry)
     return owners
 
 

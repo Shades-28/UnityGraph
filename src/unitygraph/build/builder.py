@@ -142,14 +142,15 @@ def build_project(project_root: Path) -> BuildResult:
         except Exception as exc:  # noqa: BLE001
             report.warn(f"scene_parser failed on {scene_path}: {exc}")
             continue
-        scene_id = make_scene_id(scene_path.stem)
+        rel = str(scene_path.relative_to(project_root))
+        scene_id = make_scene_id(scene_path.stem, rel)
         graph.add_node(
             Node(
                 id=scene_id,
                 type="Scene",
                 data={
                     "name": scene_path.stem,
-                    "file_path": str(scene_path.relative_to(project_root)),
+                    "file_path": rel,
                 },
             )
         )
@@ -161,14 +162,15 @@ def build_project(project_root: Path) -> BuildResult:
         except Exception as exc:  # noqa: BLE001
             report.warn(f"scene_parser failed on {prefab_path}: {exc}")
             continue
-        prefab_id = make_prefab_id(prefab_path.stem)
+        rel_pref = str(prefab_path.relative_to(project_root))
+        prefab_id = make_prefab_id(prefab_path.stem, rel_pref)
         graph.add_node(
             Node(
                 id=prefab_id,
                 type="Prefab",
                 data={
                     "name": prefab_path.stem,
-                    "file_path": str(prefab_path.relative_to(project_root)),
+                    "file_path": rel_pref,
                 },
             )
         )
@@ -178,16 +180,19 @@ def build_project(project_root: Path) -> BuildResult:
     exec_order_path = project_root / "ProjectSettings" / "MonoManager.asset"
     exec_entries = execorder_parser.parse_file(exec_order_path)
     order_by_guid = {e.guid: e.order for e in exec_entries}
-    for node in graph.nodes:
-        if node.type != "Script":
+    # Build a single (guid -> script_node_id) lookup upfront.
+    node_id_by_guid: dict[str, str] = {}
+    for guid, (klass, path) in script_class_by_guid.items():
+        rel = str(path.relative_to(project_root))
+        node_id_by_guid[guid] = make_script_id(klass.name, rel)
+    nodes_by_id = {n.id: n for n in graph.nodes}
+    for guid, order in order_by_guid.items():
+        node_id = node_id_by_guid.get(guid)
+        if node_id is None:
             continue
-        # Find the guid for this script node by reverse lookup.
-        for guid, (klass, path) in script_class_by_guid.items():
-            rel = str(path.relative_to(project_root))
-            if node.id == make_script_id(klass.name, rel):
-                if guid in order_by_guid:
-                    node.data["execution_order"] = order_by_guid[guid]
-                break
+        target = nodes_by_id.get(node_id)
+        if target is not None:
+            target.data["execution_order"] = order
 
     graph.build_ms = int((time.perf_counter() - start) * 1000)
     return BuildResult(graph=graph, report=report)
@@ -213,10 +218,8 @@ def _script_type(klass: cs_parser.ClassInfo) -> str:
 
 
 def _find_script_id_by_name(graph: Graph, class_name: str) -> str | None:
-    for node in graph.nodes:
-        if node.type == "Script" and node.data.get("name") == class_name:
-            return node.id
-    return None
+    ids = graph.script_ids_by_name(class_name)
+    return ids[0] if ids else None
 
 
 def _ingest_scene(

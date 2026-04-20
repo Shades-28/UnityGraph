@@ -75,12 +75,19 @@ class Graph:
     build_ms: int = 0
 
     _node_ids: set[str] = field(default_factory=set, init=False, repr=False)
+    _script_ids_by_name: dict[str, list[str]] = field(
+        default_factory=dict, init=False, repr=False
+    )
 
     def add_node(self, node: Node) -> None:
         if node.id in self._node_ids:
             raise ValueError(f"duplicate node id: {node.id}")
         self.nodes.append(node)
         self._node_ids.add(node.id)
+        if node.type == "Script":
+            name = str(node.data.get("name", ""))
+            if name:
+                self._script_ids_by_name.setdefault(name, []).append(node.id)
 
     def add_edge(self, edge: Edge) -> None:
         # Edges can repeat across builds; we dedupe on (from, to, type).
@@ -88,6 +95,14 @@ class Graph:
 
     def has_node(self, node_id: str) -> bool:
         return node_id in self._node_ids
+
+    def script_ids_by_name(self, name: str) -> list[str]:
+        """Return all Script node ids with the given class name. O(1) lookup."""
+        return list(self._script_ids_by_name.get(name, ()))
+
+    def nodes_by_id(self) -> dict[str, Node]:
+        """Return a dict view for O(1) node id → Node lookup."""
+        return {n.id: n for n in self.nodes}
 
     def to_json(self) -> dict[str, Any]:
         return {
@@ -132,11 +147,17 @@ def make_script_id(class_name: str, file_path: str) -> str:
     return f"script::{class_name}::{file_path}"
 
 
-def make_scene_id(scene_name: str) -> str:
+def make_scene_id(scene_name: str, rel_path: str | None = None) -> str:
+    # Unity project can have multiple scenes with the same stem (asset store packs);
+    # disambiguate with relative path when provided.
+    if rel_path:
+        return f"scene::{scene_name}::{rel_path}"
     return f"scene::{scene_name}"
 
 
-def make_prefab_id(prefab_name: str) -> str:
+def make_prefab_id(prefab_name: str, rel_path: str | None = None) -> str:
+    if rel_path:
+        return f"prefab::{prefab_name}::{rel_path}"
     return f"prefab::{prefab_name}"
 
 
