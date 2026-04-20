@@ -1,0 +1,6 @@
+--- a/EnemyAI.cs
++++ b/EnemyAI.cs
+@@
++        // Scene config: Player HealthSystem._maxHealth = 150, scene Enemy._damagePerHit = 15
++        // -> 10 hits to kill the Player.
+         [SerializeField] private int _damagePerHit = 10;

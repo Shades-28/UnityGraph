@@ -1,0 +1,9 @@
+tier: 1
+project: MiniUnityProject
+graph_path: fixtures/MiniUnityProject/graph-out/graph.json
+source_files:
+  - fixtures/MiniUnityProject/Assets/Scripts/HealthSystem.cs
+relevant_entities:
+  - HealthSystem
+task_type: refactor
+requires_scene_context: false

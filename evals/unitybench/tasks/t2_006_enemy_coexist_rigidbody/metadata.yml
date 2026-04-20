@@ -1,0 +1,11 @@
+tier: 2
+project: MiniUnityProject
+graph_path: fixtures/MiniUnityProject/graph-out/graph.json
+source_files:
+  - fixtures/MiniUnityProject/Assets/Scripts/EnemyAI.cs
+relevant_entities:
+  - EnemyAI
+  - Enemy
+task_type: new_feature
+requires_scene_context: true
+key_insight: "Enemy GameObject has Rigidbody attached co_exists_with EnemyAI (both scene + prefab); adding RequireComponent reflects reality without breaking anything"

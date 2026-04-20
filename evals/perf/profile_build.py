@@ -7,12 +7,12 @@ One-shot script — not part of the committed CLI. Usage::
 
 from __future__ import annotations
 
+import contextlib
 import sys
 import time
 from pathlib import Path
 
-from unitygraph.build.graph import Graph
-from unitygraph.build.parsers import cs_parser, execorder_parser, meta_parser, scene_parser
+from unitygraph.build.parsers import cs_parser, meta_parser, scene_parser
 
 
 def main() -> int:
@@ -23,16 +23,15 @@ def main() -> int:
 
     def _discover(pattern: str) -> list[Path]:
         skip = {"Library", "Temp", "obj", "Build", "Builds", "Logs"}
-        return [
-            p for p in root.rglob(pattern)
-            if not (set(p.parts) & skip)
-        ]
+        return [p for p in root.rglob(pattern) if not (set(p.parts) & skip)]
 
     t = time.perf_counter()
     cs_files = _discover("*.cs")
     scene_files = _discover("*.unity")
     prefab_files = _discover("*.prefab")
-    print(f"discover:     {time.perf_counter() - t:6.2f}s  (cs={len(cs_files)} scenes={len(scene_files)} prefabs={len(prefab_files)})")
+    print(
+        f"discover:     {time.perf_counter() - t:6.2f}s  (cs={len(cs_files)} scenes={len(scene_files)} prefabs={len(prefab_files)})"
+    )
 
     t = time.perf_counter()
     guid_index = meta_parser.build_guid_index(root)
@@ -41,28 +40,22 @@ def main() -> int:
     t = time.perf_counter()
     parsed_scripts = []
     for p in cs_files:
-        try:
+        with contextlib.suppress(Exception):
             parsed_scripts.append(cs_parser.parse_file(p))
-        except Exception:
-            pass
     print(f"cs_parse:     {time.perf_counter() - t:6.2f}s  ({len(parsed_scripts)} files)")
 
     t = time.perf_counter()
     parsed_scenes = []
     for p in scene_files:
-        try:
+        with contextlib.suppress(Exception):
             parsed_scenes.append(scene_parser.parse_file(p))
-        except Exception:
-            pass
     print(f"scene_parse:  {time.perf_counter() - t:6.2f}s  ({len(parsed_scenes)} files)")
 
     t = time.perf_counter()
     parsed_prefabs = []
     for p in prefab_files:
-        try:
+        with contextlib.suppress(Exception):
             parsed_prefabs.append(scene_parser.parse_file(p))
-        except Exception:
-            pass
     print(f"prefab_parse: {time.perf_counter() - t:6.2f}s  ({len(parsed_prefabs)} files)")
 
     return 0

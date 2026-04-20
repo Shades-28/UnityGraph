@@ -1,0 +1,10 @@
+--- a/PlayerController.cs
++++ b/PlayerController.cs
+@@ private void Awake()
+         private void Awake()
+         {
+             _rigidbody = GetComponent<Rigidbody>();
++            // Safe: HealthSystem has execution order -100 (set in MonoManager.asset),
++            // so its Awake has already initialized _current before we reach here.
+             _health = GetComponent<HealthSystem>();
+         }

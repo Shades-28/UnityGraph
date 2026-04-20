@@ -1,0 +1,5 @@
+--- a/EnemyAI.cs
++++ b/EnemyAI.cs
+@@
++    [RequireComponent(typeof(Rigidbody))]
+     public class EnemyAI : MonoBehaviour

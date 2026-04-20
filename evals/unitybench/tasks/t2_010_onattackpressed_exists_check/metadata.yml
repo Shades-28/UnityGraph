@@ -1,0 +1,11 @@
+tier: 2
+project: MiniUnityProject
+graph_path: fixtures/MiniUnityProject/graph-out/graph.json
+source_files:
+  - fixtures/MiniUnityProject/Assets/Scripts/PlayerController.cs
+relevant_entities:
+  - PlayerController
+  - UI_Button
+task_type: bug_fix
+requires_scene_context: true
+key_insight: "UI_Button subscribes_to PlayerController.OnAttackPressed via UnityEvent in scene YAML; method MUST be public with no args"

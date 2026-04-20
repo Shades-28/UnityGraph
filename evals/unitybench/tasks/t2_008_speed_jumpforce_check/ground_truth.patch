@@ -1,0 +1,5 @@
+--- a/PlayerController.cs
++++ b/PlayerController.cs
+@@
++        // Scene override on Player GameObject: _speed = 7.0 (code default is 5.0).
+         [SerializeField] private float _speed = 5.0f;

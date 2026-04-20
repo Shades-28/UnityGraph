@@ -1,0 +1,9 @@
+--- a/PlayerController.cs
++++ b/PlayerController.cs
+@@ private void HandleDamaged(int amount)
+         private void HandleDamaged(int amount)
+         {
+-            // Slow effect: assumes speed range [0, 5]. Wrong when Inspector sets _speed = 7.
+-            _speedMultiplier = Mathf.Max(0.1f, 1.0f - (amount / 5.0f));
++            _speedMultiplier = Mathf.Max(0.1f, 1.0f - (amount / _speed));
+         }

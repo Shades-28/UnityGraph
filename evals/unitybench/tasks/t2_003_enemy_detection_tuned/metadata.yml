@@ -1,0 +1,11 @@
+tier: 2
+project: MiniUnityProject
+graph_path: fixtures/MiniUnityProject/graph-out/graph.json
+source_files:
+  - fixtures/MiniUnityProject/Assets/Scripts/EnemyAI.cs
+relevant_entities:
+  - EnemyAI
+  - Enemy
+task_type: bug_fix
+requires_scene_context: true
+key_insight: "Enemy scene instance has _detectionRange=12 and _damagePerHit=15; prefab defaults are 10/10; scene overrides differ"

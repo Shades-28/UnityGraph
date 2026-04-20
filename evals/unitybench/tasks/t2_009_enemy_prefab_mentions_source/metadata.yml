@@ -1,0 +1,11 @@
+tier: 2
+project: MiniUnityProject
+graph_path: fixtures/MiniUnityProject/graph-out/graph.json
+source_files:
+  - fixtures/MiniUnityProject/Assets/Scripts/EnemyAI.cs
+relevant_entities:
+  - EnemyAI
+  - Enemy
+task_type: explain
+requires_scene_context: true
+key_insight: "Enemy.prefab exists AND the Main.unity scene has an Enemy GameObject with EnemyAI; docs should mention both"

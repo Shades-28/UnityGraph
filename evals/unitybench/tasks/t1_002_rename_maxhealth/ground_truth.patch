@@ -1,0 +1,5 @@
+--- a/HealthSystem.cs
++++ b/HealthSystem.cs
+@@
+         public UnityEvent<int> OnDamaged => _onDamaged;
++        public int MaxHealth => _maxHealth;

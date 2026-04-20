@@ -1,0 +1,8 @@
+--- a/PlayerController.cs
++++ b/PlayerController.cs
+@@ public void OnAttackPressed()
+         public void OnAttackPressed()
+         {
+-            // Hooked to UI_Button.onClick in Main.unity.
++            Debug.Log("Attack pressed (fired by UI_Button)");
+         }

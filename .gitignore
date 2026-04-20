@@ -37,6 +37,7 @@ graph-out/
 # Eval artifacts — transcripts regenerate on demand
 evals/i1_headline/transcript.json
 evals/results/
+evals/unitybench/results/
 
 # Claude / MCP runtime artifacts
 .claude/sessions/

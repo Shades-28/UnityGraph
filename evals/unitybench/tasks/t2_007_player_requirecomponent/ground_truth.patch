@@ -1,0 +1,6 @@
+--- a/PlayerController.cs
++++ b/PlayerController.cs
+@@
++    [RequireComponent(typeof(Rigidbody))]
++    [RequireComponent(typeof(HealthSystem))]
+     public class PlayerController : MonoBehaviour

@@ -1,0 +1,8 @@
+--- a/EnemyAI.cs
++++ b/EnemyAI.cs
+@@
++    /// <summary>
++    /// EnemyAI is attached to the Enemy GameObject in Main.unity and to the
++    /// Enemy.prefab in Assets/Prefabs. Changes here affect both.
++    /// </summary>
+     public class EnemyAI : MonoBehaviour

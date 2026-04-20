@@ -1,0 +1,12 @@
+--- a/EnemyAI.cs
++++ b/EnemyAI.cs
+@@ private void Update()
+         private void Update()
+         {
+             if (_playerTransform == null) return;
+-            float dist = Vector3.Distance(transform.position, _playerTransform.position);
+-            if (dist < _detectionRange)
++            float distSq = (transform.position - _playerTransform.position).sqrMagnitude;
++            if (distSq < _detectionRange * _detectionRange)
+             {
+                 var health = _playerTransform.GetComponent<HealthSystem>();

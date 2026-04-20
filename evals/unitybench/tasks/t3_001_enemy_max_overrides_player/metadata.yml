@@ -1,0 +1,13 @@
+tier: 3
+project: MiniUnityProject
+graph_path: fixtures/MiniUnityProject/graph-out/graph.json
+source_files:
+  - fixtures/MiniUnityProject/Assets/Scripts/EnemyAI.cs
+  - fixtures/MiniUnityProject/Assets/Scripts/HealthSystem.cs
+relevant_entities:
+  - EnemyAI
+  - HealthSystem
+  - Player
+task_type: bug_fix
+requires_scene_context: true
+key_insight: "Player's HealthSystem runtime max health = 150; EnemyAI damage per hit = 15 on scene Enemy; 10 hits to kill Player"

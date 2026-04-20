@@ -82,7 +82,9 @@ def measure(graph_path: Path) -> dict[str, dict[str, float]]:
         samples = [_time_call(fn, *args) for _ in range(N_TRIALS)]
         results[name] = {
             "median_ms": statistics.median(samples),
-            "p95_ms": sorted(samples)[int(len(samples) * 0.95) - 1] if len(samples) > 1 else samples[0],
+            "p95_ms": sorted(samples)[int(len(samples) * 0.95) - 1]
+            if len(samples) > 1
+            else samples[0],
             "max_ms": max(samples),
         }
     return results

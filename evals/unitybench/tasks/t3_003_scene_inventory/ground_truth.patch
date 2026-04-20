@@ -1,0 +1,7 @@
+--- a/PlayerController.cs
++++ b/PlayerController.cs
+@@
++    /// <remarks>
++    /// Main.unity GameObjects: Main Camera, Ground, Player, Enemy, UI_Button.
++    /// </remarks>
+     public class PlayerController : MonoBehaviour

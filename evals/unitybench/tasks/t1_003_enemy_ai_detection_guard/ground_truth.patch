@@ -1,0 +1,15 @@
+--- a/EnemyAI.cs
++++ b/EnemyAI.cs
+@@ private void Start()
+         private void Start()
+         {
+             var player = GameObject.FindWithTag("Player");
+             if (player != null)
+             {
+                 _playerTransform = player.transform;
+             }
++            else
++            {
++                Debug.LogWarning("EnemyAI: no GameObject tagged Player found; enemy will never activate.");
++            }
+         }

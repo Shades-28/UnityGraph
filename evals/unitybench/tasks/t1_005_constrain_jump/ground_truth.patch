@@ -1,0 +1,12 @@
+--- a/PlayerController.cs
++++ b/PlayerController.cs
+@@
+         public void OnAttackPressed()
+         {
+             // Hooked to UI_Button.onClick in Main.unity.
+         }
++
++        public void Jump()
++        {
++            _rigidbody.AddForce(Vector3.up * _jumpForce, ForceMode.Impulse);
++        }

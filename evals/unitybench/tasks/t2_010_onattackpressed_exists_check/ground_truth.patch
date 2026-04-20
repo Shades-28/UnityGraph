@@ -1,0 +1,6 @@
+--- a/PlayerController.cs
++++ b/PlayerController.cs
+@@
++        // UnityEvent listener: wired from UI_Button.onClick in Main.unity.
++        // Do not change the signature — the Inspector reference will break.
+         public void OnAttackPressed()

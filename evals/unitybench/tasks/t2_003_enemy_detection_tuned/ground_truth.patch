@@ -1,0 +1,6 @@
+--- a/EnemyAI.cs
++++ b/EnemyAI.cs
+@@
+         [SerializeField] private float _detectionRange = 10.0f;
++        // Scene Enemy in Main.unity overrides this to 15 (prefab default is 10).
+         [SerializeField] private int _damagePerHit = 10;

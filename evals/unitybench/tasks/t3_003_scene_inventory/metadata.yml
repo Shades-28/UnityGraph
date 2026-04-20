@@ -1,0 +1,13 @@
+tier: 3
+project: MiniUnityProject
+graph_path: fixtures/MiniUnityProject/graph-out/graph.json
+source_files:
+  - fixtures/MiniUnityProject/Assets/Scripts/PlayerController.cs
+relevant_entities:
+  - PlayerController
+  - Player
+  - Enemy
+  - UI_Button
+task_type: explain
+requires_scene_context: true
+key_insight: "Main.unity contains: Main Camera, Ground, Player, Enemy, UI_Button (5 GameObjects); only PlayerController is attached to Player"

@@ -1,0 +1,7 @@
+--- a/PlayerController.cs
++++ b/PlayerController.cs
+@@
++    // Damage chain:
++    //   EnemyAI.Update() -> HealthSystem.TakeDamage() -> HealthSystem.OnDamaged.Invoke()
++    //   -> PlayerController.HandleDamaged() (subscribed in Start via AddListener).
+     public class PlayerController : MonoBehaviour

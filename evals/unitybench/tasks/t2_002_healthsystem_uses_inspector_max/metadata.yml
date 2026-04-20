@@ -1,0 +1,11 @@
+tier: 2
+project: MiniUnityProject
+graph_path: fixtures/MiniUnityProject/graph-out/graph.json
+source_files:
+  - fixtures/MiniUnityProject/Assets/Scripts/HealthSystem.cs
+relevant_entities:
+  - HealthSystem
+  - Player
+task_type: bug_fix
+requires_scene_context: true
+key_insight: "HealthSystem._maxHealth Inspector = 150, code default = 100; docs should reflect runtime value"

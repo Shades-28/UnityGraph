@@ -1,0 +1,9 @@
+--- a/HealthSystem.cs
++++ b/HealthSystem.cs
+@@ public void TakeDamage(int amount)
+         public void TakeDamage(int amount)
+         {
++            if (amount <= 0) return;
+             _current = Mathf.Max(0, _current - amount);
+             _onDamaged.Invoke(amount);
+         }

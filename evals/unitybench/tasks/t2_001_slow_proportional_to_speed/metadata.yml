@@ -1,0 +1,14 @@
+tier: 2
+project: MiniUnityProject
+graph_path: fixtures/MiniUnityProject/graph-out/graph.json
+source_files:
+  - fixtures/MiniUnityProject/Assets/Scripts/PlayerController.cs
+relevant_entities:
+  - PlayerController
+  - Player
+task_type: bug_fix
+# This is the I1 headline bug. Solvable only if Claude knows the
+# Inspector value of `_speed` on the Player GameObject differs from the
+# code default.
+requires_scene_context: true
+key_insight: "Inspector _speed = 7.0, code default = 5.0f; slow math must scale by _speed not a literal"

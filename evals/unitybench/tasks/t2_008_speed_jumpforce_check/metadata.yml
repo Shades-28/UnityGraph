@@ -1,0 +1,11 @@
+tier: 2
+project: MiniUnityProject
+graph_path: fixtures/MiniUnityProject/graph-out/graph.json
+source_files:
+  - fixtures/MiniUnityProject/Assets/Scripts/PlayerController.cs
+relevant_entities:
+  - PlayerController
+  - Player
+task_type: new_feature
+requires_scene_context: true
+key_insight: "Player Inspector: _speed=7, _jumpForce=8, _maxHealth=100; warn if Inspector values are set to weird ranges"

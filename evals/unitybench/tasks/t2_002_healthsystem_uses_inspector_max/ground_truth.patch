@@ -1,0 +1,8 @@
+--- a/HealthSystem.cs
++++ b/HealthSystem.cs
+@@
++    /// <summary>
++    /// Player health component. Max health is set to 150 via the Inspector
++    /// on the Player GameObject in Main.unity (code default is 100).
++    /// </summary>
+     public class HealthSystem : MonoBehaviour

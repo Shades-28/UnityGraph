@@ -1,0 +1,16 @@
+tier: 3
+project: MiniUnityProject
+graph_path: fixtures/MiniUnityProject/graph-out/graph.json
+source_files:
+  - fixtures/MiniUnityProject/Assets/Scripts/PlayerController.cs
+  - fixtures/MiniUnityProject/Assets/Scripts/HealthSystem.cs
+  - fixtures/MiniUnityProject/Assets/Scripts/EnemyAI.cs
+relevant_entities:
+  - PlayerController
+  - HealthSystem
+  - EnemyAI
+  - Player
+  - Enemy
+task_type: explain
+requires_scene_context: true
+key_insight: "Full damage chain: EnemyAI -> HealthSystem.TakeDamage -> HealthSystem._onDamaged.Invoke -> PlayerController.HandleDamaged (via UnityEvent in code, AddListener in PlayerController.Start)"

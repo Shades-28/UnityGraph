@@ -1,0 +1,11 @@
+tier: 2
+project: MiniUnityProject
+graph_path: fixtures/MiniUnityProject/graph-out/graph.json
+source_files:
+  - fixtures/MiniUnityProject/Assets/Scripts/PlayerController.cs
+relevant_entities:
+  - PlayerController
+  - HealthSystem
+task_type: bug_fix
+requires_scene_context: true
+key_insight: "MonoManager forces HealthSystem execution_order=-100, PlayerController=0; HealthSystem.Awake runs first, so GetComponent<HealthSystem>() is safe in PlayerController.Awake"
