@@ -91,6 +91,50 @@ def serve(graph_path: str) -> None:
     run_stdio_server(Path(graph_path).resolve())
 
 
+@main.command(help="Generate a UNITYGRAPH CONTEXT block for a task.")
+@click.argument("task_text")
+@click.option(
+    "--graph",
+    "graph_path",
+    type=click.Path(exists=True, dir_okay=False),
+    required=True,
+    help="Path to graph.json.",
+)
+@click.option(
+    "--strategy",
+    type=click.Choice(["entity_hop", "task_type", "full_neighborhood"]),
+    default=None,
+    help="Retrieval strategy. Defaults to entity_hop when the task names entities.",
+)
+@click.option("--hops", type=int, default=2, help="BFS depth for entity_hop/task_type.")
+@click.option("--budget", type=int, default=1500, help="Max tokens in the output block.")
+def inject(
+    task_text: str,
+    graph_path: str,
+    strategy: str | None,
+    hops: int,
+    budget: int,
+) -> None:
+    from unitygraph.build.graph import Graph
+    from unitygraph.inject.engine import inject_context
+
+    graph = Graph.load(Path(graph_path))
+    result = inject_context(
+        graph,
+        task_text,
+        strategy=strategy,  # type: ignore[arg-type]
+        n_hops=hops,
+        budget=budget,
+    )
+    click.echo(result.block)
+    click.echo(
+        f"\n[inject] strategy={result.strategy} confidence={result.confidence} "
+        f"tokens={result.token_count}/{budget} nodes={result.node_count} "
+        f"edges={result.edge_count} seeds={len(result.seed_node_ids)}",
+        err=True,
+    )
+
+
 if __name__ == "__main__":
     main()
     sys.exit(0)

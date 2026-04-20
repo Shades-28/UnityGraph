@@ -96,6 +96,40 @@ def build_server(graph_path: Path) -> FastMCP:
     def query_graph(natural_language_query: str, max_nodes: int = 50) -> dict[str, Any]:
         return gtools.query_graph(graph, natural_language_query, max_nodes)
 
+    @server.tool(
+        description=(
+            "Generate a task-specific UNITYGRAPH CONTEXT block. Given a task "
+            "description (e.g., 'fix the slow on PlayerController'), returns a "
+            "formatted subgraph under the given token budget that Claude Code "
+            "can paste directly into its working context. Strategy is one of "
+            "entity_hop / task_type / full_neighborhood, or auto (default)."
+        )
+    )
+    def inject_context(
+        task_text: str,
+        strategy: str = "",
+        hops: int = 2,
+        budget: int = 1500,
+    ) -> dict[str, Any]:
+        from unitygraph.inject.engine import inject_context as _inject
+
+        result = _inject(
+            graph,
+            task_text,
+            strategy=strategy or None,  # type: ignore[arg-type]
+            n_hops=hops,
+            budget=budget,
+        )
+        return {
+            "block": result.block,
+            "strategy": result.strategy,
+            "confidence": result.confidence,
+            "token_count": result.token_count,
+            "node_count": result.node_count,
+            "edge_count": result.edge_count,
+            "seed_node_ids": result.seed_node_ids,
+        }
+
     return server
 
 
