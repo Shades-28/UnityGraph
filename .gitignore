@@ -4,8 +4,8 @@ __pycache__/
 *$py.class
 *.so
 .Python
-build/
-dist/
+/build/
+/dist/
 *.egg-info/
 .eggs/
 .pytest_cache/
@@ -34,18 +34,23 @@ Thumbs.db
 graph-out/
 .unitygraph/
 
+# Eval artifacts — transcripts regenerate on demand
+evals/i1_headline/transcript.json
+evals/results/
+
 # Claude / MCP runtime artifacts
 .claude/sessions/
 
 # Unity-side artifacts that might sneak into fixtures
-Library/
-Temp/
-Logs/
-UserSettings/
-MemoryCaptures/
-obj/
-Build/
-Builds/
+# (anchored to fixture roots so they don't clobber the Python `build/` package)
+fixtures/**/Library/
+fixtures/**/Temp/
+fixtures/**/Logs/
+fixtures/**/UserSettings/
+fixtures/**/MemoryCaptures/
+fixtures/**/obj/
+fixtures/**/Build/
+fixtures/**/Builds/
 *.csproj
 *.sln
 *.suo

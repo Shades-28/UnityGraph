@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "unitygraph": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "unitygraph.serve", "graph-out/graph.json"]
+    }
+  }
+}
