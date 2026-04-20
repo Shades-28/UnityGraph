@@ -181,6 +181,87 @@ def inject(
     )
 
 
+@main.command(help="Record feedback on a recent Claude session's output.")
+@click.argument("verdict", type=click.Choice(["correct", "incorrect"]))
+@click.option(
+    "--project",
+    "project_path",
+    type=click.Path(exists=True, file_okay=False),
+    default=".",
+    help="Project root (defaults to cwd).",
+)
+@click.option(
+    "--session",
+    "session_id",
+    default=None,
+    help="Session id to attach the feedback to. Defaults to the most recent session in the log.",
+)
+@click.option("--note", default="", help="Free-form note attached to the feedback event.")
+def feedback(verdict: str, project_path: str, session_id: str | None, note: str) -> None:
+    from unitygraph.behavior import observer
+
+    project = Path(project_path).resolve()
+    target = session_id or _latest_session_id(project)
+    if not target:
+        click.echo("no session log found — run a Claude session first", err=True)
+        sys.exit(2)
+
+    observer.record_feedback(str(project), target, verdict, note=note)
+    click.echo(f"recorded feedback ({verdict}) for session {target}")
+
+
+def _latest_session_id(project_root: Path) -> str | None:
+    from unitygraph.behavior.schema import sessions_dir
+
+    sdir = sessions_dir(project_root)
+    if not sdir.exists():
+        return None
+    files = sorted(sdir.glob("*.jsonl"), key=lambda p: p.stat().st_mtime)
+    if not files:
+        return None
+    return files[-1].stem
+
+
+@main.group(help="Observation and pattern management.")
+def patterns() -> None:
+    pass
+
+
+@patterns.command("list", help="List recent session events.")
+@click.option(
+    "--project",
+    "project_path",
+    type=click.Path(exists=True, file_okay=False),
+    default=".",
+)
+@click.option("--limit", type=int, default=20, help="Max events to show.")
+def patterns_list(project_path: str, limit: int) -> None:
+    from unitygraph.behavior import schema
+
+    project = Path(project_path).resolve()
+    events = schema.iter_all_events(project)
+    if not events:
+        click.echo("no events recorded yet")
+        return
+    for event in events[-limit:]:
+        etype = event.get("event_type", "?")
+        sid = event.get("session_id", "?")
+        ts = event.get("timestamp", "?")
+        if etype == "injection":
+            detail = (
+                f"strategy={event.get('strategy')} "
+                f"confidence={event.get('confidence')} "
+                f"tokens={event.get('token_count')}"
+            )
+        elif etype == "feedback":
+            detail = f"verdict={event.get('verdict')} note={event.get('note', '')!r}"
+        elif etype == "correction":
+            detail = f"diff={event.get('diff_summary', '')[:60]!r}"
+        else:
+            detail = ""
+        click.echo(f"[{ts}] {etype:12} {sid:16} {detail}")
+
+
 if __name__ == "__main__":
     main()
     sys.exit(0)

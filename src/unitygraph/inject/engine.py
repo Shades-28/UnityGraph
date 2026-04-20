@@ -78,6 +78,13 @@ def inject_context(
         )
         if cache_obj is not None and key is not None:
             cache_obj.put(key, result)
+        # Fire-and-forget observation. Guarded inside observer.
+        try:
+            from unitygraph.behavior import observer
+
+            observer.record_injection(graph.project_root, task_text, result)
+        except ImportError:
+            pass
         return result
 
     # Iteratively trim until we fit the budget. Lower bound = keep seeds only.
