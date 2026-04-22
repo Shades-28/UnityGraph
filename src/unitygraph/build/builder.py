@@ -35,6 +35,7 @@ from .graph import (
     Edge,
     Graph,
     Node,
+    Site,
     make_animator_id,
     make_animstate_id,
     make_component_id,
@@ -144,7 +145,33 @@ def build_project(
             primary = next((c for c in parsed.classes if c.name == path.stem), parsed.classes[0])
             script_class_by_guid[guid] = (primary, path)
 
-    # 4. Emit Script nodes.
+    # 4. Emit Script nodes + code-side edges with sites[].
+    # Track edges by (from, to, type) so we can merge multiple call sites
+    # onto a single edge — Roslyn-style.
+    edges_by_key: dict[tuple[str, str, str], Edge] = {}
+
+    def _emit_or_merge_edge(
+        from_id: str,
+        to_id: str,
+        edge_type: str,
+        data: dict[str, Any],
+        sites: list[Site],
+    ) -> None:
+        key = (from_id, to_id, edge_type)
+        existing = edges_by_key.get(key)
+        if existing is None:
+            new_edge = Edge(from_id=from_id, to_id=to_id, type=edge_type, data=data)  # type: ignore[arg-type]
+            for s in sites:
+                new_edge.add_site(s)
+            graph.add_edge(new_edge)
+            edges_by_key[key] = new_edge
+        else:
+            for s in sites:
+                existing.add_site(s)
+            # Merge data conservatively — preserve existing keys.
+            for k, v in data.items():
+                existing.data.setdefault(k, v)
+
     for path, classes in parsed_scripts:
         rel = str(path.relative_to(project_root))
         for klass in classes:
@@ -162,29 +189,95 @@ def build_project(
             if not graph.try_add_node(node):
                 report.warn("duplicate_node", rel, f"Script node id already exists: {node.id}")
                 continue
+
             if klass.base_class and klass.base_class not in {
                 "MonoBehaviour",
                 "ScriptableObject",
                 "object",
             }:
-                # We can only link to known user classes; foreign bases become
-                # a trailing attribute rather than a real edge. If the base
-                # class is a user script (by name), emit the edge.
                 base_id = _find_script_id_by_name(graph, klass.base_class)
                 if base_id is not None:
-                    graph.add_edge(Edge(from_id=node.id, to_id=base_id, type="inherits"))
-            # depends_on edges for GetComponent<T>
-            for t in klass.get_component_types:
-                target_id = _find_script_id_by_name(graph, t)
-                if target_id is not None:
-                    graph.add_edge(
-                        Edge(
-                            from_id=node.id,
-                            to_id=target_id,
-                            type="depends_on",
-                            data={"via": "GetComponent", "target_type": t},
-                        )
+                    inherits_site = Site(
+                        file=rel,
+                        line=klass.class_line or 1,
+                        col=1,
+                        kind="inherits",
+                        snippet=f"class {klass.name} : {klass.base_class}",
                     )
+                    _emit_or_merge_edge(node.id, base_id, "inherits", {}, [inherits_site])
+
+            # depends_on edges from GetComponent<T> — now site-rich.
+            gc_calls_by_target: dict[str, list[Site]] = {}
+            for call in klass.get_component_calls:
+                target_id = _find_script_id_by_name(graph, call.target)
+                if target_id is None:
+                    continue
+                site = Site(
+                    file=rel,
+                    line=call.line,
+                    col=call.col,
+                    end_line=call.end_line,
+                    end_col=call.end_col,
+                    kind="get_component",
+                    snippet=call.snippet,
+                    containing_method=call.containing_method,
+                )
+                gc_calls_by_target.setdefault(target_id, []).append(site)
+                _emit_or_merge_edge(
+                    node.id,
+                    target_id,
+                    "depends_on",
+                    {"via": "GetComponent", "target_type": call.target},
+                    [site],
+                )
+
+            # Method calls on stored fields → also depends_on, but with
+            # kind=method_call so consumers can distinguish "PC stores a
+            # Rigidbody" from "PC actually invokes a method on it".
+            for call in klass.field_method_calls:
+                target_id = _find_script_id_by_name(graph, call.target)
+                if target_id is None:
+                    continue
+                site = Site(
+                    file=rel,
+                    line=call.line,
+                    col=call.col,
+                    end_line=call.end_line,
+                    end_col=call.end_col,
+                    kind="method_call",
+                    snippet=call.snippet,
+                    containing_method=call.containing_method,
+                )
+                _emit_or_merge_edge(
+                    node.id,
+                    target_id,
+                    "depends_on",
+                    {"via": "method_call", "target_type": call.target},
+                    [site],
+                )
+
+            # FindObjectOfType edges remain depends_on with kind=find_object.
+            for call in klass.find_object_calls:
+                target_id = _find_script_id_by_name(graph, call.target)
+                if target_id is None:
+                    continue
+                site = Site(
+                    file=rel,
+                    line=call.line,
+                    col=call.col,
+                    end_line=call.end_line,
+                    end_col=call.end_col,
+                    kind="find_object",
+                    snippet=call.snippet,
+                    containing_method=call.containing_method,
+                )
+                _emit_or_merge_edge(
+                    node.id,
+                    target_id,
+                    "depends_on",
+                    {"via": "FindObjectOfType", "target_type": call.target},
+                    [site],
+                )
 
     # 5. Parse scenes + prefabs, emit GameObject / Component nodes and attach edges.
     for scene_path in scene_files:

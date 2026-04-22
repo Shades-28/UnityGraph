@@ -53,12 +53,38 @@ class FieldInfo:
     is_serialized: bool
     is_public: bool
     default_literal: str | None = None
+    line: int = 0  # 1-indexed; 0 = unknown (v1.x graphs)
+    col: int = 0
 
 
 @dataclass
 class MethodInfo:
     name: str
     is_lifecycle: bool
+    line: int = 0
+    col: int = 0
+    end_line: int = 0
+
+
+@dataclass
+class CallSite:
+    """One location where a call happens.
+
+    Applies to both ``GetComponent<T>()`` invocations and method calls on
+    stored fields (``_rigidbody.AddForce(...)``). The ``target`` is the
+    type argument for generic calls, or the (guessed) type of the
+    receiver for member-access calls.
+    """
+
+    method: str  # e.g. "GetComponent", "FindObjectOfType", "AddForce"
+    target: str  # type-arg / receiver-type / or the method name when ambiguous
+    line: int
+    col: int
+    end_line: int
+    end_col: int
+    snippet: str
+    containing_method: str
+    containing_class: str
 
 
 @dataclass
@@ -69,8 +95,19 @@ class ClassInfo:
     interfaces: list[str] = field(default_factory=list)
     fields: list[FieldInfo] = field(default_factory=list)
     methods: list[MethodInfo] = field(default_factory=list)
+    # Bare-string lists kept for v1.x consumers (tests, builder).
     get_component_types: list[str] = field(default_factory=list)
     find_object_of_type_types: list[str] = field(default_factory=list)
+    # v1.2+: rich call-site records.
+    get_component_calls: list[CallSite] = field(default_factory=list)
+    find_object_calls: list[CallSite] = field(default_factory=list)
+    # Method calls on stored fields (`_rigidbody.AddForce(...)`) — each
+    # entry's ``target`` is the receiver identifier, which the builder
+    # resolves to the field's declared type.
+    field_method_calls: list[CallSite] = field(default_factory=list)
+    # Source span of the class itself (for Rationale harvesting later).
+    class_line: int = 0
+    class_end_line: int = 0
     is_monobehaviour: bool = False
     is_scriptable_object: bool = False
 
@@ -87,14 +124,25 @@ class ClassInfo:
                     "serialized": f.is_serialized,
                     "public": f.is_public,
                     "default": f.default_literal,
+                    "line": f.line,
                 }
                 for f in self.fields
             ],
-            "methods": [{"name": m.name, "lifecycle": m.is_lifecycle} for m in self.methods],
+            "methods": [
+                {
+                    "name": m.name,
+                    "lifecycle": m.is_lifecycle,
+                    "line": m.line,
+                    "end_line": m.end_line,
+                }
+                for m in self.methods
+            ],
             "get_component_types": list(self.get_component_types),
             "find_object_of_type_types": list(self.find_object_of_type_types),
             "is_monobehaviour": self.is_monobehaviour,
             "is_scriptable_object": self.is_scriptable_object,
+            "class_line": self.class_line,
+            "class_end_line": self.class_end_line,
         }
 
 
@@ -102,6 +150,9 @@ class ClassInfo:
 class ParsedScript:
     path: Path
     classes: list[ClassInfo] = field(default_factory=list)
+    # Field-name -> declared type, assembled across all classes in this
+    # file. Used by the builder to resolve receivers in field_method_calls.
+    field_types: dict[str, str] = field(default_factory=dict)
 
 
 def parse_file(path: Path) -> ParsedScript:
@@ -109,11 +160,32 @@ def parse_file(path: Path) -> ParsedScript:
     tree = _PARSER.parse(source)
     visitor = _Visitor(source)
     visitor.visit(tree.root_node)
-    return ParsedScript(path=path, classes=visitor.classes)
+    # Visitor tracks every field's declared type (serialized OR private).
+    return ParsedScript(
+        path=path,
+        classes=visitor.classes,
+        field_types=dict(visitor._field_types),
+    )
 
 
 def _text(node: TSNode, source: bytes) -> str:
     return source[node.start_byte : node.end_byte].decode("utf-8", errors="replace")
+
+
+def _line_col(node: TSNode) -> tuple[int, int, int, int]:
+    """Return (line, col, end_line, end_col) as 1-indexed values."""
+    sp = node.start_point
+    ep = node.end_point
+    return sp[0] + 1, sp[1] + 1, ep[0] + 1, ep[1] + 1
+
+
+def _snippet(node: TSNode, source: bytes, max_len: int = 140) -> str:
+    text = _text(node, source).strip()
+    # Collapse multi-line calls into one readable line.
+    text = " ".join(text.split())
+    if len(text) > max_len:
+        text = text[: max_len - 1] + "…"
+    return text
 
 
 class _Visitor:
@@ -121,6 +193,12 @@ class _Visitor:
         self.source = source
         self.classes: list[ClassInfo] = []
         self._ns_stack: list[str] = []
+        # Field name -> declared type, populated during field parsing so
+        # later method-body walks can resolve ``_rigidbody.AddForce(...)``
+        # receivers to their declared ``Rigidbody`` type. Scoped per-file
+        # (not per-class) which is fine for Unity's one-class-per-file
+        # convention; cross-class lookups are rare and handled at builder.
+        self._field_types: dict[str, str] = {}
 
     def visit(self, node: TSNode) -> None:
         t = node.type
@@ -153,11 +231,14 @@ class _Visitor:
         is_mb = base_class == "MonoBehaviour"
         is_so = base_class == "ScriptableObject"
 
+        line, _col, end_line, _end_col = _line_col(node)
         info = ClassInfo(
             name=class_name,
             namespace=namespace,
             base_class=base_class,
             interfaces=interfaces,
+            class_line=line,
+            class_end_line=end_line,
             is_monobehaviour=is_mb,
             is_scriptable_object=is_so,
         )
@@ -222,6 +303,10 @@ class _Visitor:
             field_name = _text(name_n, self.source)
             default = self._extract_default(var)
             is_serialized = is_public or has_serialize_attr
+            f_line, f_col, _el, _ec = _line_col(name_n)
+            # Always record the field's declared type so the visitor can
+            # resolve `_x.Method()` later — even for non-serialized fields.
+            self._field_types[field_name] = type_name
             if not is_serialized:
                 continue
             info.fields.append(
@@ -231,6 +316,8 @@ class _Visitor:
                     is_serialized=is_serialized,
                     is_public=is_public,
                     default_literal=default,
+                    line=f_line,
+                    col=f_col,
                 )
             )
 
@@ -250,25 +337,99 @@ class _Visitor:
             return
         method_name = _text(name_node, self.source)
         is_lifecycle = method_name in LIFECYCLE_METHODS and info.is_monobehaviour
-        info.methods.append(MethodInfo(name=method_name, is_lifecycle=is_lifecycle))
+        m_line, m_col, m_end, _ec = _line_col(node)
+        info.methods.append(
+            MethodInfo(
+                name=method_name,
+                is_lifecycle=is_lifecycle,
+                line=m_line,
+                col=m_col,
+                end_line=m_end,
+            )
+        )
 
         body = node.child_by_field_name("body")
         if body is not None:
-            self._collect_calls(body, info)
+            self._collect_calls(body, info, method_name)
 
-    def _collect_calls(self, node: TSNode, info: ClassInfo) -> None:
+    def _collect_calls(
+        self,
+        node: TSNode,
+        info: ClassInfo,
+        containing_method: str,
+    ) -> None:
         if node.type == "invocation_expression":
             fn_node = node.child_by_field_name("function")
             if fn_node is not None:
+                # 1. Generic calls: GetComponent<T>, FindObjectOfType<T>, etc.
                 generic_target = self._extract_generic_call_target(fn_node)
                 if generic_target is not None:
                     method, type_arg = generic_target
-                    if method == "GetComponent":
+                    if method in ("GetComponent", "TryGetComponent"):
                         info.get_component_types.append(type_arg)
-                    elif method == "FindObjectOfType":
+                        info.get_component_calls.append(
+                            self._make_call_site(node, info, containing_method, method, type_arg)
+                        )
+                    elif method in ("FindObjectOfType", "FindObjectsOfType"):
                         info.find_object_of_type_types.append(type_arg)
+                        info.find_object_calls.append(
+                            self._make_call_site(node, info, containing_method, method, type_arg)
+                        )
+                else:
+                    # 2. Member-access calls on stored fields: `_foo.Bar(...)`.
+                    receiver, member = self._extract_member_call(fn_node)
+                    if receiver is not None and member is not None:
+                        target_type = self._field_types.get(receiver)
+                        if target_type is not None:
+                            info.field_method_calls.append(
+                                self._make_call_site(
+                                    node,
+                                    info,
+                                    containing_method,
+                                    member,
+                                    target_type,
+                                )
+                            )
         for child in node.children:
-            self._collect_calls(child, info)
+            self._collect_calls(child, info, containing_method)
+
+    def _make_call_site(
+        self,
+        node: TSNode,
+        info: ClassInfo,
+        containing_method: str,
+        method: str,
+        target: str,
+    ) -> CallSite:
+        line, col, end_line, end_col = _line_col(node)
+        return CallSite(
+            method=method,
+            target=target,
+            line=line,
+            col=col,
+            end_line=end_line,
+            end_col=end_col,
+            snippet=_snippet(node, self.source),
+            containing_method=containing_method,
+            containing_class=info.name,
+        )
+
+    def _extract_member_call(self, fn_node: TSNode) -> tuple[str | None, str | None]:
+        """For ``receiver.Method(...)``, return (receiver, method) or (None, None).
+
+        Only unwraps one level of member access — ``this._x.Y()`` returns
+        (None, None) which is fine; the builder can only resolve simple
+        field-scoped receivers anyway.
+        """
+        if fn_node.type != "member_access_expression":
+            return None, None
+        receiver_node = fn_node.child_by_field_name("expression")
+        name_node = fn_node.child_by_field_name("name")
+        if receiver_node is None or name_node is None:
+            return None, None
+        if receiver_node.type != "identifier":
+            return None, None
+        return _text(receiver_node, self.source), _text(name_node, self.source)
 
     def _extract_generic_call_target(self, fn_node: TSNode) -> tuple[str, str] | None:
         target = fn_node
