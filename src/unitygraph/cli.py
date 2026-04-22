@@ -108,6 +108,7 @@ def init(project_path: str, force: bool, no_skill: bool) -> None:
     targets: list[tuple[Path, Path]] = [
         (templates / "CLAUDE.md", project / "CLAUDE.md"),
         (templates / ".mcp.json", project / ".mcp.json"),
+        (templates / "settings.json", project / ".claude" / "settings.json"),
     ]
     if not no_skill:
         targets.append(

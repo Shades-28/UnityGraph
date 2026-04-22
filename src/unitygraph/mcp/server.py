@@ -1,8 +1,9 @@
 """MCP stdio server exposing UnityGraph query tools.
 
-The server loads ``graph.json`` once at startup and answers tool calls from
-in-memory state. All five I1 tools delegate to ``unitygraph.mcp.tools``;
-the MCP layer is a thin adapter around that.
+The server holds a :class:`GraphRef` that auto-reloads ``graph.json`` when
+the file changes on disk. That means a Stop/PostToolUse hook that runs
+``unitygraph build . --update`` during a Claude Code session takes effect
+on the *next* MCP tool call — no server restart required.
 """
 
 from __future__ import annotations
@@ -12,25 +13,27 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
-from unitygraph.build.graph import Graph
 from unitygraph.mcp import tools as gtools
+from unitygraph.mcp.graph_ref import GraphRef
 
 
 def build_server(graph_path: Path) -> FastMCP:
-    graph = Graph.load(graph_path)
+    graph_ref = GraphRef(graph_path)
     server: FastMCP = FastMCP(
         name="unitygraph",
         instructions=(
             "Query the UnityGraph knowledge graph for a Unity project. "
             "Use these tools to look up GameObject components, Inspector-set "
             "field values, scene hierarchies, script usages, and UnityEvent "
-            "connections before making assumptions about the scene."
+            "connections before making assumptions about the scene. The graph "
+            "auto-reloads when the project is rebuilt, so you always see the "
+            "latest state."
         ),
     )
 
     @server.tool(description="List all components attached to a GameObject by name.")
     def get_components(gameobject_name: str) -> dict[str, Any]:
-        return gtools.get_components(graph, gameobject_name)
+        return gtools.get_components(graph_ref.current(), gameobject_name)
 
     @server.tool(
         description=(
@@ -40,15 +43,15 @@ def build_server(graph_path: Path) -> FastMCP:
         )
     )
     def get_inspector_values(component_name: str, gameobject_name: str) -> dict[str, Any]:
-        return gtools.get_inspector_values(graph, component_name, gameobject_name)
+        return gtools.get_inspector_values(graph_ref.current(), component_name, gameobject_name)
 
     @server.tool(description="Get the full GameObject list for a scene by name.")
     def get_scene_graph(scene_name: str) -> dict[str, Any]:
-        return gtools.get_scene_graph(graph, scene_name)
+        return gtools.get_scene_graph(graph_ref.current(), scene_name)
 
     @server.tool(description="Find all GameObjects that have a given script attached.")
     def find_script_usages(script_name: str) -> dict[str, Any]:
-        return gtools.find_script_usages(graph, script_name)
+        return gtools.find_script_usages(graph_ref.current(), script_name)
 
     @server.tool(
         description=(
@@ -57,7 +60,7 @@ def build_server(graph_path: Path) -> FastMCP:
         )
     )
     def get_event_connections(gameobject_name: str) -> dict[str, Any]:
-        return gtools.get_event_connections(graph, gameobject_name)
+        return gtools.get_event_connections(graph_ref.current(), gameobject_name)
 
     @server.tool(
         description=(
@@ -66,7 +69,7 @@ def build_server(graph_path: Path) -> FastMCP:
         )
     )
     def get_prefab_chain(prefab_name: str) -> dict[str, Any]:
-        return gtools.get_prefab_chain(graph, prefab_name)
+        return gtools.get_prefab_chain(graph_ref.current(), prefab_name)
 
     @server.tool(
         description=(
@@ -75,7 +78,7 @@ def build_server(graph_path: Path) -> FastMCP:
         )
     )
     def get_neighbors(node_id: str, hops: int = 1) -> dict[str, Any]:
-        return gtools.get_neighbors(graph, node_id, hops)
+        return gtools.get_neighbors(graph_ref.current(), node_id, hops)
 
     @server.tool(
         description=(
@@ -84,7 +87,7 @@ def build_server(graph_path: Path) -> FastMCP:
         )
     )
     def shortest_path(from_id: str, to_id: str) -> dict[str, Any]:
-        return gtools.shortest_path(graph, from_id, to_id)
+        return gtools.shortest_path(graph_ref.current(), from_id, to_id)
 
     @server.tool(
         description=(
@@ -94,7 +97,7 @@ def build_server(graph_path: Path) -> FastMCP:
         )
     )
     def query_graph(natural_language_query: str, max_nodes: int = 50) -> dict[str, Any]:
-        return gtools.query_graph(graph, natural_language_query, max_nodes)
+        return gtools.query_graph(graph_ref.current(), natural_language_query, max_nodes)
 
     @server.tool(
         description=(
@@ -114,7 +117,7 @@ def build_server(graph_path: Path) -> FastMCP:
         from unitygraph.inject.engine import inject_context as _inject
 
         result = _inject(
-            graph,
+            graph_ref.current(),
             task_text,
             strategy=strategy or None,  # type: ignore[arg-type]
             n_hops=hops,

@@ -7,7 +7,7 @@ from click.testing import CliRunner
 from unitygraph.cli import main
 
 
-def test_init_creates_claude_md_mcp_json_and_skill(tmp_path):
+def test_init_creates_claude_md_mcp_json_settings_and_skill(tmp_path):
     project = tmp_path / "unity-proj"
     project.mkdir()
 
@@ -17,6 +17,7 @@ def test_init_creates_claude_md_mcp_json_and_skill(tmp_path):
 
     assert (project / "CLAUDE.md").exists()
     assert (project / ".mcp.json").exists()
+    assert (project / ".claude" / "settings.json").exists()
     assert (project / ".claude" / "skills" / "unity-aware" / "SKILL.md").exists()
 
     # The skill front-matter should have a name and description.
@@ -25,6 +26,26 @@ def test_init_creates_claude_md_mcp_json_and_skill(tmp_path):
     )
     assert "name: unity-aware" in skill_text
     assert "description:" in skill_text
+
+
+def test_init_settings_contains_auto_rebuild_hook(tmp_path):
+    """Proves the Stop hook that runs `unitygraph build . --update` is wired."""
+    import json
+
+    project = tmp_path / "unity-proj"
+    project.mkdir()
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["init", str(project)])
+    assert result.exit_code == 0
+
+    settings = json.loads((project / ".claude" / "settings.json").read_text(encoding="utf-8"))
+    assert "hooks" in settings
+    assert "Stop" in settings["hooks"]
+    stop_commands = [
+        h.get("command", "") for group in settings["hooks"]["Stop"] for h in group.get("hooks", [])
+    ]
+    assert any("unitygraph build" in c and "--update" in c for c in stop_commands)
 
 
 def test_init_skips_existing_without_force(tmp_path):
@@ -61,4 +82,6 @@ def test_init_no_skill_skips_skill_directory(tmp_path):
 
     assert (project / "CLAUDE.md").exists()
     assert (project / ".mcp.json").exists()
-    assert not (project / ".claude").exists()
+    # settings.json still written — the auto-rebuild hook is orthogonal to the skill.
+    assert (project / ".claude" / "settings.json").exists()
+    assert not (project / ".claude" / "skills").exists()
