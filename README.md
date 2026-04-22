@@ -41,6 +41,47 @@ graph + MCP server without the inject/behavior extras.
 
 ---
 
+## Update
+
+When a newer UnityGraph is released, or you've pulled a newer version of the
+editable install, refresh your projects with one command:
+
+```bash
+cd /path/to/your/unity/project
+unitygraph update .
+```
+
+This:
+
+- Syncs every template file (`CLAUDE.md`, `.mcp.json`, `.claude/settings.json`,
+  `.claude/skills/unity-aware/SKILL.md`) to the installed version.
+- Preserves files you've hand-edited — anything with a `TODO` / `# custom`
+  marker is left alone and flagged as `custom`.
+- Rebuilds the graph via `build . --update` (incremental; reuses the parse
+  cache).
+
+Useful flags:
+
+```bash
+unitygraph update . --check           # preview changes without writing
+unitygraph update . --templates-only  # refresh templates, skip graph rebuild
+unitygraph update . --graph-only      # rebuild graph, skip template sync
+```
+
+To update the `unitygraph` package itself:
+
+```bash
+pip install -U "unitygraph[full]"     # published PyPI version
+# or, for the editable local install:
+cd /path/to/UnityGraph
+git pull
+pip install -e ".[full]"              # re-installs if dependencies changed
+```
+
+Then in every Unity project that uses it: `unitygraph update .`
+
+---
+
 ## The three layers
 
 | Layer | Role | Ships as |

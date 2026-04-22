@@ -138,6 +138,147 @@ def init(project_path: str, force: bool, no_skill: bool) -> None:
         )
 
 
+@main.command(
+    help="Refresh UnityGraph in a project: sync templates to the installed version, then rebuild the graph."
+)
+@click.argument("project_path", type=click.Path(exists=True, file_okay=False), default=".")
+@click.option(
+    "--templates-only",
+    is_flag=True,
+    help="Only refresh CLAUDE.md / .mcp.json / settings.json / skill. Skip the graph rebuild.",
+)
+@click.option(
+    "--graph-only",
+    is_flag=True,
+    help="Only rebuild the graph (`build --update`). Skip template sync.",
+)
+@click.option(
+    "--check",
+    is_flag=True,
+    help="Report what would change without modifying any files.",
+)
+def update(
+    project_path: str,
+    templates_only: bool,
+    graph_only: bool,
+    check: bool,
+) -> None:
+    import hashlib
+
+    project = Path(project_path).resolve()
+    templates = Path(__file__).parent / "templates"
+
+    pairs: list[tuple[Path, Path, str]] = [
+        (templates / "CLAUDE.md", project / "CLAUDE.md", "CLAUDE.md"),
+        (templates / ".mcp.json", project / ".mcp.json", ".mcp.json"),
+        (
+            templates / "settings.json",
+            project / ".claude" / "settings.json",
+            ".claude/settings.json",
+        ),
+        (
+            templates / "skills" / "unity-aware" / "SKILL.md",
+            project / ".claude" / "skills" / "unity-aware" / "SKILL.md",
+            ".claude/skills/unity-aware/SKILL.md",
+        ),
+    ]
+
+    def _hash(path: Path) -> str:
+        # Normalize line endings so a template installed on Windows (CRLF on
+        # disk via `write_text`) compares equal to the source template (LF in
+        # the package). Without this, `update --templates-only` on a pristine
+        # init immediately flags every file as changed.
+        text = path.read_text(encoding="utf-8").replace("\r\n", "\n")
+        return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+    # Templates phase.
+    if not graph_only:
+        click.echo(f"UnityGraph update (templates): {project}", err=True)
+        updated = 0
+        unchanged = 0
+        missing = 0
+        custom = 0
+        for source, target, rel in pairs:
+            if not source.exists():
+                continue
+            if not target.exists():
+                if check:
+                    click.echo(f"  would install: {rel}", err=True)
+                else:
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+                    click.echo(f"  installed:     {rel}", err=True)
+                missing += 1
+                continue
+            if _hash(source) == _hash(target):
+                unchanged += 1
+                continue
+            # Target has drifted. If the user hand-edited it, don't clobber silently.
+            is_user_edited = _looks_user_edited(target, rel)
+            if is_user_edited and not check:
+                click.echo(
+                    f"  custom:        {rel}  (hand-edited — run `unitygraph init {project} --force` to overwrite)",
+                    err=True,
+                )
+                custom += 1
+                continue
+            if check:
+                click.echo(f"  would update:  {rel}", err=True)
+            else:
+                target.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+                click.echo(f"  updated:       {rel}", err=True)
+            updated += 1
+
+        click.echo(
+            f"  templates: {updated} updated, {missing} installed, "
+            f"{custom} custom (left alone), {unchanged} unchanged",
+            err=True,
+        )
+
+    # Graph phase.
+    if not templates_only:
+        if check:
+            click.echo("  would run: unitygraph build . --update", err=True)
+            return
+        click.echo("UnityGraph update (graph):", err=True)
+        graph_out = project / "graph-out"
+        cache_dir = graph_out / ".parse_cache"
+        cache = ParseCache.load(cache_dir)
+        result = build_project(project, cache=cache)
+        cache.write()
+        out_path = graph_out / "graph.json"
+        result.graph.write(out_path)
+        click.echo(
+            f"  rebuilt: {len(result.graph.nodes)} nodes, "
+            f"{len(result.graph.edges)} edges, {result.graph.build_ms}ms",
+            err=True,
+        )
+
+    if not graph_only and not templates_only:
+        click.echo(
+            "\nTip: `unitygraph update --check` previews changes without writing.",
+            err=True,
+        )
+
+
+def _looks_user_edited(path: Path, rel: str) -> bool:
+    """Heuristic: if the file diverges from *any* known template in the
+    package history, treat as user-edited. For v1.1.0 we only know the
+    current template, so we fall back to a size/length comparison: files
+    larger than template + 20% or with "TODO"/"custom" markers are treated
+    as edited."""
+    # Only apply to CLAUDE.md and the skill — .mcp.json and settings.json
+    # are expected to be pure templates.
+    if rel not in {"CLAUDE.md", ".claude/skills/unity-aware/SKILL.md"}:
+        return False
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    markers = ("TODO", "# CUSTOM", "# custom", "<!-- custom -->")
+    return any(m in text for m in markers)
+
+
 @main.command(help="Generate a UNITYGRAPH CONTEXT block for a task.")
 @click.argument("task_text")
 @click.option(
