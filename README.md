@@ -96,12 +96,30 @@ for the iteration-by-iteration build history.
 
 ---
 
+## Observatory — live reactive visualization
+
+```bash
+unitygraph viz .
+```
+
+Opens your browser to a dark-themed, force-directed "galaxy" view of the
+project graph. Every time the graph rebuilds (Stop hook, manual `build
+--update`, anything else), the page animates the new nodes in without a
+refresh — search, filter by node type, click for a detail card showing
+Inspector values, script fields, prefab chains, etc.
+
+Type-colored constellations: Scripts (ember), GameObjects (cold cyan),
+Components (mercury), Scenes (plum), Prefabs (sea-foam),
+AnimatorControllers (rose gold), AnimStates (lilac), ShaderGraphs (coral).
+
 ## CLI reference
 
 ```
 unitygraph build <path> [-o OUT] [--update] [-v]
 unitygraph serve <graph.json>                     # MCP stdio server
+unitygraph viz   [graph.json] [--project DIR] [--port N] [--no-browser]
 unitygraph init  [path] [--force] [--no-skill]    # scaffold Claude integration
+unitygraph update [path] [--check] [--templates-only] [--graph-only]
 unitygraph inject "<task>" --graph graph.json     # dump a UNITYGRAPH CONTEXT block
 unitygraph feedback correct|incorrect [--session ID] [--note TXT]
 unitygraph patterns list|show|promote|stats|replay

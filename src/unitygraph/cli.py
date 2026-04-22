@@ -323,6 +323,72 @@ def inject(
     )
 
 
+@main.command(help="Launch the Observatory — a live reactive visualization of the project graph.")
+@click.argument(
+    "graph_path",
+    type=click.Path(exists=True, dir_okay=False),
+    required=False,
+)
+@click.option(
+    "--project",
+    "project_path",
+    type=click.Path(exists=True, file_okay=False),
+    default=".",
+    help="Project root (default: cwd). Ignored if GRAPH_PATH is given explicitly.",
+)
+@click.option("--port", type=int, default=7842, help="Preferred port (auto-bumps if busy).")
+@click.option("--host", default="127.0.0.1", help="Bind host (default localhost only).")
+@click.option("--no-browser", is_flag=True, help="Don't auto-open the browser.")
+def viz(
+    graph_path: str | None,
+    project_path: str,
+    port: int,
+    host: str,
+    no_browser: bool,
+) -> None:
+    import webbrowser
+
+    from unitygraph.viz.server import run_server, wait_until_ready
+
+    if graph_path is None:
+        resolved = Path(project_path).resolve() / "graph-out" / "graph.json"
+    else:
+        resolved = Path(graph_path).resolve()
+
+    if not resolved.exists():
+        click.echo(
+            f"graph not found: {resolved}\nRun `unitygraph build <project>` first.",
+            err=True,
+        )
+        sys.exit(2)
+
+    server, bound_port = run_server(resolved, port=port)
+    url = f"http://127.0.0.1:{bound_port}/"
+    click.echo(f"Observatory serving {resolved.name} at {url}", err=True)
+    click.echo("Press Ctrl+C to stop.", err=True)
+
+    if not no_browser:
+        # Start the server in a thread, wait for /graph.json to be reachable,
+        # then pop the browser.
+        import threading
+
+        server_thread = threading.Thread(target=server.serve_forever, daemon=True)
+        server_thread.start()
+        if wait_until_ready(bound_port, timeout=5.0):
+            webbrowser.open(url)
+        try:
+            server_thread.join()
+        except KeyboardInterrupt:
+            click.echo("\nshutting down.", err=True)
+            server.shutdown()
+    else:
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            click.echo("\nshutting down.", err=True)
+            server.shutdown()
+
+
 @main.command(help="Record feedback on a recent Claude session's output.")
 @click.argument("verdict", type=click.Choice(["correct", "incorrect"]))
 @click.option(
