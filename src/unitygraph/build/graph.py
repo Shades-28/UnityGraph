@@ -26,7 +26,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
 
-SCHEMA_VERSION = "1.2"
+SCHEMA_VERSION = "2.0"
 
 NodeType = Literal[
     "Script",

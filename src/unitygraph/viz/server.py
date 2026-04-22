@@ -128,14 +128,15 @@ def transform_graph(graph_path: Path) -> dict[str, Any]:
             payload["override_count"] = sum(
                 1 for v in iv.values() if isinstance(v, (int, float, str, bool))
             )
-        links.append(
-            {
-                "source": e.from_id,
-                "target": e.to_id,
-                "type": e.type,
-                "data": payload,
-            }
-        )
+        link: dict[str, object] = {
+            "source": e.from_id,
+            "target": e.to_id,
+            "type": e.type,
+            "data": payload,
+        }
+        if e.sites:
+            link["sites"] = [s.to_json() for s in e.sites]
+        links.append(link)
 
     return {
         "schema_version": g.schema_version,

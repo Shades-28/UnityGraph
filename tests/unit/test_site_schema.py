@@ -152,8 +152,36 @@ def test_graph_roundtrip_preserves_sites(tmp_path: Path):
     assert restored.edges[0].sites[0].snippet == "b.Method();"
 
 
-def test_schema_version_is_1_2():
-    """Sanity: constant matches the documented version."""
+def test_schema_version_is_2_0():
+    """v2.0 graph: constant matches the documented version."""
     from unitygraph.build.graph import SCHEMA_VERSION
 
-    assert SCHEMA_VERSION == "1.2"
+    assert SCHEMA_VERSION == "2.0"
+
+
+def test_schema_loads_v1_graphs_backward_compat(tmp_path):
+    """v2.0 loader must still accept v1.0/v1.1/v1.2 graph.json files
+    (empty sites[] on every edge). Don't break users mid-upgrade."""
+    import json
+
+    from unitygraph.build.graph import Graph
+
+    legacy = {
+        "schema_version": "1.1",
+        "project_root": str(tmp_path),
+        "stats": {"n_nodes": 2, "n_edges": 1, "build_ms": 0},
+        "generated_at": "",
+        "nodes": [
+            {"id": "script::A::A.cs", "type": "Script", "name": "A"},
+            {"id": "script::B::B.cs", "type": "Script", "name": "B"},
+        ],
+        "edges": [
+            {"from": "script::A::A.cs", "to": "script::B::B.cs", "type": "depends_on"}
+        ],
+    }
+    path = tmp_path / "legacy.json"
+    path.write_text(json.dumps(legacy), encoding="utf-8")
+    g = Graph.load(path)
+    assert len(g.edges) == 1
+    assert g.edges[0].sites == []
+    assert g.sites_available() is False

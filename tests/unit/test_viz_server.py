@@ -48,6 +48,17 @@ def test_transform_graph_returns_expected_shape(mini_graph):
             assert key in link
 
 
+def test_transform_graph_surfaces_edge_sites_for_observatory(mini_graph):
+    """v2.0: links in the viz payload must carry sites[] so the Observatory
+    evidence popover can render file:line click-throughs."""
+    payload = transform_graph(mini_graph)
+    links_with_sites = [lk for lk in payload["links"] if lk.get("sites")]
+    assert links_with_sites, "v2.0 viz payload must include sites[] on at least one link"
+    site = links_with_sites[0]["sites"][0]
+    for key in ("file", "line", "kind"):
+        assert key in site
+
+
 def test_transform_graph_player_controller_shows_fields(mini_graph):
     payload = transform_graph(mini_graph)
     pc = next(

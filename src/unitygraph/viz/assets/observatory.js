@@ -244,7 +244,9 @@ fg
     container.style.cursor = node ? "pointer" : "";
   })
   .onNodeClick(node => showDetail(node))
-  .onBackgroundClick(() => hideDetail())
+  .onLinkClick(link => showEdgeDetail(link))
+  .onLinkHover(link => { container.style.cursor = link ? "pointer" : ""; })
+  .onBackgroundClick(() => { hideDetail(); hideEdgeDetail(); })
   .cooldownTicks(180)
   .d3AlphaDecay(0.015)
   .d3VelocityDecay(0.28)
@@ -515,6 +517,100 @@ function hideDetail() {
 }
 
 document.getElementById("detail-close").addEventListener("click", hideDetail);
+
+/* -------------------------------------------------------------------------
+   Evidence popover (v2.0) — click an edge, see where it lives in source
+   ------------------------------------------------------------------------- */
+
+function showEdgeDetail(link) {
+  if (!link) return;
+  let card = document.getElementById("edge-detail");
+  if (!card) {
+    card = document.createElement("div");
+    card.id = "edge-detail";
+    card.className = "detail-card edge-detail";
+    card.innerHTML = `
+      <header>
+        <span id="edge-detail-type" class="detail-type"></span>
+        <span id="edge-detail-title" class="detail-name"></span>
+        <button id="edge-detail-close" class="close" aria-label="Close">×</button>
+      </header>
+      <div id="edge-detail-body" class="detail-body"></div>`;
+    document.body.appendChild(card);
+    card.querySelector("#edge-detail-close").addEventListener("click", hideEdgeDetail);
+  }
+  card.hidden = false;
+  const style = EDGE_STYLES[link.type];
+  if (style) card.style.setProperty("--accent", style.color.replace(/[\d.]+\)$/, "0.9)"));
+
+  const srcId = typeof link.source === "object" ? link.source.id : link.source;
+  const dstId = typeof link.target === "object" ? link.target.id : link.target;
+  const nodesById = new Map((state.forceData?.nodes || []).map(n => [n.id, n]));
+  const srcName = nodesById.get(srcId)?.name || srcId;
+  const dstName = nodesById.get(dstId)?.name || dstId;
+
+  document.getElementById("edge-detail-type").textContent = link.type;
+  document.getElementById("edge-detail-title").textContent = `${srcName} → ${dstName}`;
+
+  const body = document.getElementById("edge-detail-body");
+  body.innerHTML = "";
+
+  const sites = link.sites || [];
+  if (!sites.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty";
+    empty.textContent = "no evidence sites — this edge was inferred from structure alone.";
+    body.appendChild(empty);
+  } else {
+    const header = document.createElement("dt");
+    header.textContent = `${sites.length} evidence site${sites.length === 1 ? "" : "s"}`;
+    body.appendChild(header);
+    const list = document.createElement("ul");
+    list.className = "sites";
+    for (const site of sites) {
+      const li = document.createElement("li");
+      li.className = `site site-${site.kind || "unknown"}`;
+      const kindTag = document.createElement("span");
+      kindTag.className = "site-kind";
+      kindTag.textContent = site.kind || "";
+      const loc = document.createElement("span");
+      loc.className = "site-loc";
+      loc.textContent = `${site.file}:${site.line}`;
+      li.appendChild(kindTag);
+      li.appendChild(loc);
+      if (site.containing_method) {
+        const cm = document.createElement("span");
+        cm.className = "site-method";
+        cm.textContent = `in ${site.containing_method}()`;
+        li.appendChild(cm);
+      }
+      if (site.snippet) {
+        const code = document.createElement("pre");
+        code.className = "site-snippet";
+        code.textContent = site.snippet;
+        li.appendChild(code);
+      }
+      list.appendChild(li);
+    }
+    body.appendChild(list);
+  }
+  // Position mirrors showDetail but to the left edge so both cards can coexist.
+  const w = window.innerWidth;
+  card.style.left = "28px";
+  card.style.bottom = "80px";
+  card.style.right = "auto";
+  card.style.top = "auto";
+  if (w < 768) {
+    card.style.left = "16px";
+    card.style.right = "16px";
+    card.style.bottom = "80px";
+  }
+}
+
+function hideEdgeDetail() {
+  const card = document.getElementById("edge-detail");
+  if (card) card.hidden = true;
+}
 
 /* -------------------------------------------------------------------------
    Search
