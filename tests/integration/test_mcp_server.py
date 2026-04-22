@@ -51,6 +51,13 @@ async def _run_mcp(graph_path: Path):
         get_events = await session.call_tool(
             "get_event_connections", {"gameobject_name": "UI_Button"}
         )
+        who_uses = await session.call_tool("who_uses", {"script_name": "HealthSystem"})
+        impact = await session.call_tool(
+            "impact_of", {"script_name": "PlayerController", "hops": 1}
+        )
+        overrides = await session.call_tool(
+            "inspector_overrides_for", {"script_name": "HealthSystem"}
+        )
         return {
             "tool_names": tool_names,
             "get_components": get_components,
@@ -58,6 +65,9 @@ async def _run_mcp(graph_path: Path):
             "get_scene": get_scene,
             "find_usages": find_usages,
             "get_events": get_events,
+            "who_uses": who_uses,
+            "impact": impact,
+            "overrides": overrides,
         }
 
 
@@ -84,6 +94,14 @@ def test_mcp_server_all_five_tools(graph_path):
         "get_scene_graph",
         "find_script_usages",
         "get_event_connections",
+        # v1.6.0 query library
+        "who_uses",
+        "impact_of",
+        "find_singletons",
+        "inspector_overrides_for",
+        "field_wiring",
+        "event_listeners",
+        "find_missing_scripts",
     }
     assert expected_tools.issubset(results["tool_names"]), (
         f"missing tools: {expected_tools - results['tool_names']}"
@@ -114,3 +132,19 @@ def test_mcp_server_all_five_tools(graph_path):
     assert ge is not None
     assert ge["outgoing"]
     assert any(e.get("method") == "OnAttackPressed" for e in ge["outgoing"])
+
+    # v1.6.0 query library
+    wu = _payload(results["who_uses"])
+    assert wu is not None
+    assert wu["found"] is True
+    assert wu["total_references"] > 0
+
+    im = _payload(results["impact"])
+    assert im is not None
+    assert im["found"] is True
+    assert im["impacted_count"] > 0
+
+    iov = _payload(results["overrides"])
+    assert iov is not None
+    assert iov["found"] is True
+    assert iov["overridden_attachments"] >= 1

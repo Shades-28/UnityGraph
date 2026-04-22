@@ -13,6 +13,7 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
+from unitygraph.mcp import queries as gqueries
 from unitygraph.mcp import tools as gtools
 from unitygraph.mcp.graph_ref import GraphRef
 
@@ -132,6 +133,78 @@ def build_server(graph_path: Path) -> FastMCP:
             "edge_count": result.edge_count,
             "seed_node_ids": result.seed_node_ids,
         }
+
+    # ── v1.6.0 deterministic query library ──────────────────────────────
+    @server.tool(
+        description=(
+            "Every inbound reference to a script — attachments, GetComponent/"
+            "FindObjectOfType/method callers, subclasses, UnityEvent listeners. "
+            "Each usage includes evidence sites (file:line)."
+        )
+    )
+    def who_uses(script_name: str) -> dict[str, Any]:
+        return gqueries.who_uses(graph_ref.current(), script_name)
+
+    @server.tool(
+        description=(
+            "Blast radius — every node reachable outbound from this script "
+            "within `hops`. Reports the first edge type that reached each "
+            "target, so you can gauge what a refactor touches."
+        )
+    )
+    def impact_of(script_name: str, hops: int = 2) -> dict[str, Any]:
+        return gqueries.impact_of(graph_ref.current(), script_name, hops=hops)
+
+    @server.tool(
+        description=(
+            "Scripts attached to `min_attachments` or more GameObjects across "
+            "the project. These are 'used everywhere' — renames and API "
+            "changes have outsize blast radius."
+        )
+    )
+    def find_singletons(min_attachments: int = 2) -> dict[str, Any]:
+        return gqueries.find_singletons(graph_ref.current(), min_attachments=min_attachments)
+
+    @server.tool(
+        description=(
+            "All Inspector-tuned fields for a script across every scene/prefab "
+            "attachment. An override means the scene value differs from the "
+            "code-level default — the field where Claude Code is most often "
+            "wrong by reading .cs alone."
+        )
+    )
+    def inspector_overrides_for(script_name: str) -> dict[str, Any]:
+        return gqueries.inspector_overrides_for(graph_ref.current(), script_name)
+
+    @server.tool(
+        description=(
+            "Every place `script_name.field_name` is wired in scenes/prefabs "
+            "as a UnityEvent listener. Call before renaming a serialized "
+            "UnityEvent field."
+        )
+    )
+    def field_wiring(script_name: str, field_name: str) -> dict[str, Any]:
+        return gqueries.field_wiring(graph_ref.current(), script_name, field_name)
+
+    @server.tool(
+        description=(
+            "All UnityEvent callbacks that land on methods of a script. Run "
+            "before renaming a public method — UnityEvent strings bind by "
+            "name, not by reference."
+        )
+    )
+    def event_listeners(script_name: str) -> dict[str, Any]:
+        return gqueries.event_listeners(graph_ref.current(), script_name)
+
+    @server.tool(
+        description=(
+            "Placeholder Script nodes — scene/prefab references to a "
+            "script_guid that doesn't resolve to a .cs file in this project. "
+            "Usually indicates missing scripts or third-party packages."
+        )
+    )
+    def find_missing_scripts() -> dict[str, Any]:
+        return gqueries.find_missing_scripts(graph_ref.current())
 
     return server
 
