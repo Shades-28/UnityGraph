@@ -89,15 +89,17 @@ def audit(graph_path: Path) -> dict:
                         if def_clean == str(scene_value):
                             inspector_same_as_default += 1
                             continue
-                    inspector_overrides.append({
-                        "script": script_name,
-                        "field": field_name,
-                        "code_default": default,
-                        "scene_value": scene_value,
-                        "gameobject": dst.get("name"),
-                        "scope": scope,
-                        "script_file": script_rel_path,
-                    })
+                    inspector_overrides.append(
+                        {
+                            "script": script_name,
+                            "field": field_name,
+                            "code_default": default,
+                            "scene_value": scene_value,
+                            "gameobject": dst.get("name"),
+                            "scope": scope,
+                            "script_file": script_rel_path,
+                        }
+                    )
 
         elif e["type"] == "subscribes_to":
             subscribes_to_edges += 1
@@ -108,9 +110,7 @@ def audit(graph_path: Path) -> dict:
 
     # Scripts used in multiple scenes (the "where is this used" signal Claude can't see)
     multi_scene_scripts = [
-        (sid, len(scopes))
-        for sid, scopes in scenes_per_script.items()
-        if len(scopes) > 1
+        (sid, len(scopes)) for sid, scopes in scenes_per_script.items() if len(scopes) > 1
     ]
     multi_scene_scripts.sort(key=lambda x: -x[1])
 
@@ -136,10 +136,16 @@ def audit(graph_path: Path) -> dict:
 
 def main() -> int:
     targets = [
-        ("MiniUnityProject",      Path(__file__).parents[2] / "fixtures/MiniUnityProject/graph-out/graph.json"),
-        ("Indian-Bike-Gangster",  Path("C:/Users/aryan/AppData/Local/Temp/ug-indian-bike/graph.json")),
-        ("clash.io",              Path("C:/Users/aryan/AppData/Local/Temp/ug-clash/graph.json")),
-        ("Graudation-Saga",       Path("C:/Users/aryan/AppData/Local/Temp/ug-grad/graph.json")),
+        (
+            "MiniUnityProject",
+            Path(__file__).parents[2] / "fixtures/MiniUnityProject/graph-out/graph.json",
+        ),
+        (
+            "Indian-Bike-Gangster",
+            Path("C:/Users/aryan/AppData/Local/Temp/ug-indian-bike/graph.json"),
+        ),
+        ("clash.io", Path("C:/Users/aryan/AppData/Local/Temp/ug-clash/graph.json")),
+        ("Graudation-Saga", Path("C:/Users/aryan/AppData/Local/Temp/ug-grad/graph.json")),
     ]
 
     for label, path in targets:
@@ -155,18 +161,36 @@ def main() -> int:
         print(f"project:     {result['project']}")
         print(f"graph:       {s.get('n_nodes', '?'):,} nodes, {s.get('n_edges', '?'):,} edges")
         print()
-        print(f"  Inspector overrides (scene value != code default):  {result['inspector_overrides_count']:,}")
-        print(f"  Inspector same-as-default:                          {result['inspector_same_as_default_count']:,}")
-        print(f"  Inspector values on fields w/o known defaults:      {result['untracked_inspector_values_count']:,}")
-        print(f"  UnityEvent subscribes_to edges:                     {result['subscribes_to_edges']:,}")
-        print(f"  Script attachments (script -> GO):                  {result['script_attachments']:,}")
-        print(f"  Prefab is_variant_of edges:                         {result['is_variant_of_edges']:,}")
-        print(f"  Prefab overrides edges:                             {result['overrides_edges']:,}")
-        print(f"  Script execution_order overrides:                   {result['execution_order_overrides']:,}")
-        print(f"  Scripts attached in >1 scope:                       {result['scripts_attached_multiple_places']:,}")
+        print(
+            f"  Inspector overrides (scene value != code default):  {result['inspector_overrides_count']:,}"
+        )
+        print(
+            f"  Inspector same-as-default:                          {result['inspector_same_as_default_count']:,}"
+        )
+        print(
+            f"  Inspector values on fields w/o known defaults:      {result['untracked_inspector_values_count']:,}"
+        )
+        print(
+            f"  UnityEvent subscribes_to edges:                     {result['subscribes_to_edges']:,}"
+        )
+        print(
+            f"  Script attachments (script -> GO):                  {result['script_attachments']:,}"
+        )
+        print(
+            f"  Prefab is_variant_of edges:                         {result['is_variant_of_edges']:,}"
+        )
+        print(
+            f"  Prefab overrides edges:                             {result['overrides_edges']:,}"
+        )
+        print(
+            f"  Script execution_order overrides:                   {result['execution_order_overrides']:,}"
+        )
+        print(
+            f"  Scripts attached in >1 scope:                       {result['scripts_attached_multiple_places']:,}"
+        )
 
         if result["sample_inspector_overrides"]:
-            print(f"\n  Sample Inspector overrides (up to 15):")
+            print("\n  Sample Inspector overrides (up to 15):")
             for o in result["sample_inspector_overrides"]:
                 print(
                     f"    - {o['script']}.{o['field']}:  "
@@ -174,7 +198,7 @@ def main() -> int:
                     f"(on {o['gameobject']} in {o['scope']})"
                 )
         if result["top_multi_scene_scripts"]:
-            print(f"\n  Top scripts appearing in multiple scenes/prefabs:")
+            print("\n  Top scripts appearing in multiple scenes/prefabs:")
             for entry in result["top_multi_scene_scripts"]:
                 print(f"    - {entry['name']:40}  in {entry['scopes']:3} scopes")
     return 0

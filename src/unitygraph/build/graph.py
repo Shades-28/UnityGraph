@@ -1,15 +1,21 @@
 """Graph model + JSON (de)serialization.
 
-Schema (graph.json v1.0) — frozen at I1. Additive changes only in later iterations.
+Schema (graph.json v1.2) — additive since v1.0.
 
-Node types: Script, GameObject, Component, Scene, Prefab.
+Node types: Script, GameObject, Component, Scene, Prefab, AnimState,
+            AnimatorController, ShaderGraph, Rationale.
 Edge types: attached_to, co_exists_with, calls, subscribes_to, depends_on,
             inherits, instantiates, is_variant_of, overrides, transitions_to,
-            loads_scene.
+            loads_scene, contains_state, has_animator, uses_subgraph, explains.
 
-Only the top-level shape, plus required fields (``id``, ``type``, ``from``, ``to``)
-are frozen per ``UnityGraph_Development_Plan.md`` §2.1. Per-type payload keys
-live under ``data`` on each node/edge, so new fields are always additive.
+v1.2 introduced the evidence layer: every edge carries ``sites: list[Site]``,
+each Site recording the (file, line, col, snippet, kind, confidence) that
+justifies the edge's existence. Sites come from location-aware parsers
+that preserve tree-sitter ``start_point`` / YAML line numbers.
+
+Backwards compatibility: v1.x graphs loaded by this module synthesize
+empty ``sites: []`` per edge. Observatory + MCP tools check
+``sites_available`` to know whether to render evidence UI.
 """
 
 from __future__ import annotations
@@ -20,7 +26,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
 
-SCHEMA_VERSION = "1.1"
+SCHEMA_VERSION = "1.2"
 
 NodeType = Literal[
     "Script",
@@ -31,6 +37,7 @@ NodeType = Literal[
     "AnimState",
     "AnimatorController",
     "ShaderGraph",
+    "Rationale",
 ]
 EdgeType = Literal[
     "attached_to",
@@ -47,7 +54,85 @@ EdgeType = Literal[
     "contains_state",
     "has_animator",
     "uses_subgraph",
+    "explains",
 ]
+
+# The ``kind`` of evidence a Site represents. Keep this tightly enumerated —
+# downstream queries pattern-match on these.
+SiteKind = Literal[
+    "get_component",
+    "find_object",
+    "method_call",
+    "field_decl",
+    "inherits",
+    "implements",
+    "instantiates",
+    "subscribes_to",
+    "inspector_override",
+    "prefab_override",
+    "transitions_to",
+    "require_component",
+]
+
+# Confidence of the evidence. v2.0 only emits EXTRACTED; INFERRED and
+# AMBIGUOUS are reserved for pattern-based queries that might ship later.
+Confidence = Literal["EXTRACTED", "INFERRED", "AMBIGUOUS"]
+
+
+@dataclass
+class Site:
+    """One source-level justification for an edge.
+
+    Follows the Roslyn ``ReferenceLocation`` shape — one logical edge can
+    carry many sites, each pointing at a distinct file+line where the
+    relationship is observable.
+    """
+
+    file: str  # project-relative path
+    line: int  # 1-indexed
+    col: int  # 1-indexed
+    kind: SiteKind
+    confidence: Confidence = "EXTRACTED"
+    end_line: int | None = None
+    end_col: int | None = None
+    snippet: str = ""  # the exact source fragment
+    containing_method: str | None = None
+    reason: str | None = None  # optional human-readable note
+
+    def to_json(self) -> dict[str, Any]:
+        out: dict[str, Any] = {
+            "file": self.file,
+            "line": self.line,
+            "col": self.col,
+            "kind": self.kind,
+            "confidence": self.confidence,
+        }
+        if self.end_line is not None:
+            out["end_line"] = self.end_line
+        if self.end_col is not None:
+            out["end_col"] = self.end_col
+        if self.snippet:
+            out["snippet"] = self.snippet
+        if self.containing_method:
+            out["containing_method"] = self.containing_method
+        if self.reason:
+            out["reason"] = self.reason
+        return out
+
+    @classmethod
+    def from_json(cls, payload: dict[str, Any]) -> Site:
+        return cls(
+            file=str(payload["file"]),
+            line=int(payload["line"]),
+            col=int(payload.get("col", 1)),
+            kind=payload.get("kind", "method_call"),
+            confidence=payload.get("confidence", "EXTRACTED"),
+            end_line=int(payload["end_line"]) if "end_line" in payload else None,
+            end_col=int(payload["end_col"]) if "end_col" in payload else None,
+            snippet=str(payload.get("snippet", "")),
+            containing_method=payload.get("containing_method"),
+            reason=payload.get("reason"),
+        )
 
 
 @dataclass
@@ -70,15 +155,26 @@ class Edge:
     to_id: str
     type: EdgeType
     data: dict[str, Any] = field(default_factory=dict)
+    sites: list[Site] = field(default_factory=list)
 
     def to_json(self) -> dict[str, Any]:
-        reserved = {"from", "to", "type"}
-        return {
+        reserved = {"from", "to", "type", "sites"}
+        payload: dict[str, Any] = {
             "from": self.from_id,
             "to": self.to_id,
             "type": self.type,
             **{k: v for k, v in self.data.items() if k not in reserved},
         }
+        if self.sites:
+            payload["sites"] = [s.to_json() for s in self.sites]
+        return payload
+
+    def add_site(self, site: Site) -> None:
+        """Append a site if it's not already present (dedup on file+line+col)."""
+        key = (site.file, site.line, site.col, site.kind)
+        if any((s.file, s.line, s.col, s.kind) == key for s in self.sites):
+            return
+        self.sites.append(site)
 
 
 @dataclass
@@ -165,8 +261,22 @@ class Graph:
             edge_type = raw.pop("type")
             from_id = raw.pop("from")
             to_id = raw.pop("to")
-            g.add_edge(Edge(from_id=from_id, to_id=to_id, type=edge_type, data=raw))
+            raw_sites = raw.pop("sites", [])
+            sites = [Site.from_json(s) for s in raw_sites if isinstance(s, dict)]
+            g.add_edge(
+                Edge(
+                    from_id=from_id,
+                    to_id=to_id,
+                    type=edge_type,
+                    data=raw,
+                    sites=sites,
+                )
+            )
         return g
+
+    def sites_available(self) -> bool:
+        """True if any edge carries at least one Site (v2+ builds)."""
+        return any(e.sites for e in self.edges)
 
 
 def make_script_id(class_name: str, file_path: str) -> str:
