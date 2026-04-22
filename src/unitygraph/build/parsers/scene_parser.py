@@ -77,6 +77,9 @@ class SceneComponent:
     inspector_values: dict[str, Any] = field(default_factory=dict)
     script_guid: str | None = None  # only for MonoBehaviour
     event_connections: list[EventConnection] = field(default_factory=list)
+    # File-level line numbers (v1.5+). 0 = unknown.
+    header_line: int = 0
+    inspector_value_lines: dict[str, int] = field(default_factory=dict)
 
 
 @dataclass
@@ -88,6 +91,7 @@ class EventConnection:
     method_name: str
     argument_mode: int
     target_type: str | None = None  # "m_TargetAssemblyTypeName"
+    line: int = 0  # 1-indexed file line of the m_PersistentCalls block (v1.5+)
 
 
 @dataclass
@@ -95,6 +99,7 @@ class PrefabOverride:
     target_file_id: int
     property_path: str
     value: Any
+    line: int = 0  # 1-indexed file line of the override entry (v1.5+)
 
 
 @dataclass
@@ -195,6 +200,7 @@ def _ingest_component(scene: ParsedScene, doc: UnityDoc) -> None:
         class_id=doc.class_id,
         type_name=type_name,
         gameobject_file_id=go_fid,
+        header_line=doc.header_line,
     )
 
     if doc.class_id == SCRIPT_CLASS_ID:
@@ -221,7 +227,12 @@ def _ingest_component(scene: ParsedScene, doc: UnityDoc) -> None:
             }
         }
         comp.inspector_values = inspector
-        comp.event_connections = _extract_event_connections(inspector)
+        # Per-field line lookup — only for keys we actually emit edges from.
+        for k in inspector:
+            line = doc.find_key_line(k)
+            if line:
+                comp.inspector_value_lines[k] = line
+        comp.event_connections = _extract_event_connections(inspector, doc)
     else:
         # For built-in components, keep the body as-is minus boilerplate.
         inspector = {
@@ -230,6 +241,10 @@ def _ingest_component(scene: ParsedScene, doc: UnityDoc) -> None:
             if k not in {"m_ObjectHideFlags", "m_GameObject", "m_Enabled", "serializedVersion"}
         }
         comp.inspector_values = inspector
+        for k in inspector:
+            line = doc.find_key_line(k)
+            if line:
+                comp.inspector_value_lines[k] = line
 
     scene.components.append(comp)
     scene.components_by_fileid[doc.file_id] = comp
@@ -242,20 +257,35 @@ def _ingest_prefab_instance(scene: ParsedScene, doc: UnityDoc) -> None:
         guid = source_ref.get("guid")
         source_guid = str(guid) if guid else None
 
+    # Pre-scan body_text for the file-level line of each override entry.
+    # Each entry starts with `    - target:` (4-space list marker inside
+    # m_Modifications). Pair them positionally with parsed mods.
+    # Line math mirrors UnityDoc.find_key_line: body_text leads with a
+    # phantom newline from the header's trailing \n, so line_in_body starts
+    # at 0 to compensate.
+    override_lines: list[int] = []
+    if doc.body_text and doc.header_line:
+        for line_in_body, raw in enumerate(doc.body_text.splitlines()):
+            stripped = raw.lstrip()
+            if stripped.startswith("- target:") and raw.startswith(" " * 4):
+                override_lines.append(doc.header_line + line_in_body)
+
     overrides: list[PrefabOverride] = []
     mods = doc.body.get("m_Modification") or {}
-    for mod in mods.get("m_Modifications", []) or []:
+    for idx, mod in enumerate(mods.get("m_Modifications", []) or []):
         if not isinstance(mod, dict):
             continue
         target = mod.get("target", {})
         target_fid = target.get("fileID") if isinstance(target, dict) else None
         if not isinstance(target_fid, int):
             continue
+        line = override_lines[idx] if idx < len(override_lines) else 0
         overrides.append(
             PrefabOverride(
                 target_file_id=target_fid,
                 property_path=str(mod.get("propertyPath", "")),
                 value=mod.get("value"),
+                line=line,
             )
         )
 
@@ -268,15 +298,27 @@ def _ingest_prefab_instance(scene: ParsedScene, doc: UnityDoc) -> None:
     )
 
 
-def _extract_event_connections(values: dict[str, Any]) -> list[EventConnection]:
-    """Walk MonoBehaviour field values for UnityEvent persistent calls."""
+def _extract_event_connections(
+    values: dict[str, Any], doc: UnityDoc
+) -> list[EventConnection]:
+    """Walk MonoBehaviour field values for UnityEvent persistent calls.
+
+    The ``line`` we attach to each EventConnection is the line of the
+    *top-level MonoBehaviour field* that holds the UnityEvent (e.g.
+    ``m_OnClick``). This is the useful click-through target — a user
+    clicking the edge wants to land on the field, not on a nested
+    ``m_PersistentCalls`` mapping buried several levels deep.
+    """
     connections: list[EventConnection] = []
     for field_name, value in values.items():
-        _walk_for_events(field_name, value, connections)
+        root_line = doc.find_key_line(field_name)
+        _walk_for_events(field_name, value, connections, root_line)
     return connections
 
 
-def _walk_for_events(field_name: str, value: Any, out: list[EventConnection]) -> None:
+def _walk_for_events(
+    field_name: str, value: Any, out: list[EventConnection], root_line: int
+) -> None:
     if isinstance(value, dict):
         if "m_PersistentCalls" in value:
             persistent = value["m_PersistentCalls"]
@@ -296,11 +338,12 @@ def _walk_for_events(field_name: str, value: Any, out: list[EventConnection]) ->
                             method_name=str(call.get("m_MethodName", "")),
                             argument_mode=int(call.get("m_Mode", 0) or 0),
                             target_type=call.get("m_TargetAssemblyTypeName"),
+                            line=root_line,
                         )
                     )
             return
         for k, v in value.items():
-            _walk_for_events(f"{field_name}.{k}", v, out)
+            _walk_for_events(f"{field_name}.{k}", v, out, root_line)
     elif isinstance(value, list):
         for i, item in enumerate(value):
-            _walk_for_events(f"{field_name}[{i}]", item, out)
+            _walk_for_events(f"{field_name}[{i}]", item, out, root_line)

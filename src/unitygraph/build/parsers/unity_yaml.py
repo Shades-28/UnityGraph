@@ -89,6 +89,11 @@ class UnityDoc:
     stripped:
         True if the document was the ``stripped`` variant (prefab instance
         override markers). We record it but don't special-case yet.
+    header_line:
+        1-indexed line number of the ``--- !u!...`` separator. v1.5+.
+    body_text:
+        Raw substring of the document body. Lets line lookups (find_key_line)
+        compute file-level line numbers without re-parsing.
     """
 
     class_id: int
@@ -96,6 +101,29 @@ class UnityDoc:
     type_name: str
     body: dict[str, Any] = field(default_factory=dict)
     stripped: bool = False
+    header_line: int = 0
+    body_text: str = ""
+
+    def find_key_line(self, key: str, *, indent: int = 2) -> int:
+        """Return the file-level 1-indexed line of ``key:`` inside body_text.
+
+        Looks for a line shaped like ``  key:`` at the given indentation
+        (Unity's usual two-space top-level body indent). Returns 0 if
+        not found, which callers should treat as "unknown".
+
+        Line math: ``body_text`` begins at ``match.end()`` — which lands at
+        the ``\\n`` terminating the header line, so the first element of
+        ``splitlines(keepends=True)`` is just that trailing ``\\n`` (a
+        phantom empty line). We subtract 1 to compensate, so the document's
+        type-name line (``MonoBehaviour:``, etc.) maps to ``header_line + 1``.
+        """
+        if not self.body_text:
+            return 0
+        prefix = " " * indent + key + ":"
+        for line_in_body, raw in enumerate(self.body_text.splitlines(keepends=True)):
+            if raw.startswith(prefix):
+                return self.header_line + line_in_body
+        return 0
 
 
 def load_documents(
@@ -119,6 +147,25 @@ def load_documents(
     if not headers:
         return []
 
+    # Cumulative line numbers per byte offset — built lazily when a doc
+    # actually needs its header_line. Pre-computing the full table once
+    # is O(n) and amortizes over all documents.
+    line_starts: list[int] = [0]
+    for i, ch in enumerate(text):
+        if ch == "\n":
+            line_starts.append(i + 1)
+
+    def _line_for_offset(byte_off: int) -> int:
+        # Binary search line_starts for the largest start <= byte_off.
+        lo, hi = 0, len(line_starts) - 1
+        while lo < hi:
+            mid = (lo + hi + 1) // 2
+            if line_starts[mid] <= byte_off:
+                lo = mid
+            else:
+                hi = mid - 1
+        return lo + 1  # 1-indexed
+
     docs: list[UnityDoc] = []
     for i, match in enumerate(headers):
         class_id = int(match.group(1))
@@ -126,9 +173,11 @@ def load_documents(
             continue
         file_id = int(match.group(2))
         stripped = bool(match.group(3))
+        header_line = _line_for_offset(match.start())
         body_start = match.end()
         body_end = headers[i + 1].start() if i + 1 < len(headers) else len(text)
-        body_text = text[body_start:body_end].strip()
+        body_raw = text[body_start:body_end]
+        body_text = body_raw.strip()
         if not body_text:
             continue
         try:
@@ -147,6 +196,8 @@ def load_documents(
                 type_name=str(type_name),
                 body=body,
                 stripped=stripped,
+                header_line=header_line,
+                body_text=body_raw,
             )
         )
     return docs

@@ -304,13 +304,21 @@ def build_project(
         ):
             report.warn("duplicate_node", rel, f"Scene node id already exists: {scene_id}")
             continue
-        _ingest_scene(graph, scene_id, scene_parsed, script_class_by_guid, guid_index, report)
+        _ingest_scene(
+            graph,
+            scene_id,
+            scene_parsed,
+            script_class_by_guid,
+            guid_index,
+            report,
+            scene_rel=rel,
+        )
 
     # Track prefab guid → prefab_id for is_variant_of edges. Also remember each
     # parsed scene/prefab so we can do a second pass for overrides after all
     # prefab nodes exist.
     prefab_id_by_guid: dict[str, str] = {}
-    variant_work: list[tuple[str, ParsedScene]] = []
+    variant_work: list[tuple[str, ParsedScene, str]] = []
     for prefab_path in prefab_files:
         rel_prefab = str(prefab_path.relative_to(project_root))
         cached_pref = cache.get(rel_prefab, prefab_path) if cache is not None else None
@@ -341,8 +349,16 @@ def build_project(
         if pg:
             prefab_id_by_guid[pg] = prefab_id
 
-        _ingest_scene(graph, prefab_id, prefab_parsed, script_class_by_guid, guid_index, report)
-        variant_work.append((prefab_id, prefab_parsed))
+        _ingest_scene(
+            graph,
+            prefab_id,
+            prefab_parsed,
+            script_class_by_guid,
+            guid_index,
+            report,
+            scene_rel=rel_pref,
+        )
+        variant_work.append((prefab_id, prefab_parsed, rel_pref))
 
     # 5b. Resolve prefab variant chains.
     _emit_variant_edges(graph, variant_work, prefab_id_by_guid)
@@ -416,6 +432,8 @@ def _ingest_scene(
     script_class_by_guid: dict[str, tuple[cs_parser.ClassInfo, Path]],
     guid_index: dict[str, Path],
     report: BuildReport,
+    *,
+    scene_rel: str,
 ) -> None:
     # Emit GameObject nodes.
     go_id_by_fileid: dict[int, str] = {}
@@ -482,17 +500,26 @@ def _ingest_scene(
                 script_node_id = make_script_id(klass.name, rel)
 
             mb_fileid_to_script_id[comp.file_id] = script_node_id
-            graph.add_edge(
-                Edge(
-                    from_id=script_node_id,
-                    to_id=owner_id,
-                    type="attached_to",
-                    data={
-                        "scope": scope_id,
-                        "inspector_values": _scalarize(comp.inspector_values),
-                    },
-                )
+            attached_edge = Edge(
+                from_id=script_node_id,
+                to_id=owner_id,
+                type="attached_to",
+                data={
+                    "scope": scope_id,
+                    "inspector_values": _scalarize(comp.inspector_values),
+                },
             )
+            if comp.header_line:
+                attached_edge.add_site(
+                    Site(
+                        file=scene_rel,
+                        line=comp.header_line,
+                        col=1,
+                        kind="attached_to",
+                        snippet=f"MonoBehaviour attached (fileID {comp.file_id})",
+                    )
+                )
+            graph.add_edge(attached_edge)
         else:
             cid = make_component_id(owner_id, comp.file_id, comp.type_name)
             if graph.try_add_node(
@@ -540,18 +567,27 @@ def _ingest_scene(
             target_script_id = mb_fileid_to_script_id.get(ec.target_file_id)
             if target_script_id is None:
                 continue
-            graph.add_edge(
-                Edge(
-                    from_id=src_script_id,
-                    to_id=target_script_id,
-                    type="subscribes_to",
-                    data={
-                        "field": ec.field_name,
-                        "method": ec.method_name,
-                        "mode": ec.argument_mode,
-                    },
-                )
+            edge = Edge(
+                from_id=src_script_id,
+                to_id=target_script_id,
+                type="subscribes_to",
+                data={
+                    "field": ec.field_name,
+                    "method": ec.method_name,
+                    "mode": ec.argument_mode,
+                },
             )
+            if ec.line:
+                edge.add_site(
+                    Site(
+                        file=scene_rel,
+                        line=ec.line,
+                        col=1,
+                        kind="subscribes_to",
+                        snippet=f"{ec.field_name} -> {ec.method_name}",
+                    )
+                )
+            graph.add_edge(edge)
 
 
 def _scalarize(values: dict[str, Any]) -> dict[str, Any]:
@@ -579,11 +615,11 @@ def _clean_value(value: Any) -> Any:
 
 def _emit_variant_edges(
     graph: Graph,
-    variant_work: list[tuple[str, ParsedScene]],
+    variant_work: list[tuple[str, ParsedScene, str]],
     prefab_id_by_guid: dict[str, str],
 ) -> None:
     """Emit ``is_variant_of`` + ``overrides`` edges from PrefabInstance blocks."""
-    for variant_id, parsed in variant_work:
+    for variant_id, parsed, variant_rel in variant_work:
         for instance in parsed.prefab_instances:
             if not instance.source_prefab_guid:
                 continue
@@ -600,18 +636,27 @@ def _emit_variant_edges(
             for override in instance.overrides:
                 if not override.property_path:
                     continue
-                graph.add_edge(
-                    Edge(
-                        from_id=variant_id,
-                        to_id=parent_id,
-                        type="overrides",
-                        data={
-                            "target_file_id": override.target_file_id,
-                            "property_path": override.property_path,
-                            "value": override.value,
-                        },
-                    )
+                override_edge = Edge(
+                    from_id=variant_id,
+                    to_id=parent_id,
+                    type="overrides",
+                    data={
+                        "target_file_id": override.target_file_id,
+                        "property_path": override.property_path,
+                        "value": override.value,
+                    },
                 )
+                if override.line:
+                    override_edge.add_site(
+                        Site(
+                            file=variant_rel,
+                            line=override.line,
+                            col=1,
+                            kind="prefab_override",
+                            snippet=f"{override.property_path} = {override.value!r}",
+                        )
+                    )
+                graph.add_edge(override_edge)
 
 
 def _ingest_animators(

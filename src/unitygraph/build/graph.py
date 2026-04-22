@@ -72,6 +72,7 @@ SiteKind = Literal[
     "prefab_override",
     "transitions_to",
     "require_component",
+    "attached_to",
 ]
 
 # Confidence of the evidence. v2.0 only emits EXTRACTED; INFERRED and
