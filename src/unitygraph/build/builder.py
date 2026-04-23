@@ -399,14 +399,13 @@ def _discover(root: Path, pattern: str, *, skip_generated: bool) -> list[Path]:
     collide with Unity's ``Temp/`` output folder.
     """
     out: list[Path] = []
-    skip_dirs = {"Library", "Temp", "obj", "Build", "Builds", "Logs"}
     for path in root.rglob(pattern):
         if skip_generated:
             try:
                 rel_parts = set(path.relative_to(root).parts)
             except ValueError:
                 rel_parts = set()
-            if rel_parts & skip_dirs:
+            if rel_parts & meta_parser.DEFAULT_SKIP_DIRS:
                 continue
         out.append(path)
     return out

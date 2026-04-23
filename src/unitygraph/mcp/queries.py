@@ -22,6 +22,65 @@ from typing import Any
 
 from unitygraph.build.graph import Edge, Graph, Node
 
+# Path prefixes that indicate third-party / package code a user typically
+# does not own and cannot meaningfully refactor. Used to filter queries
+# like ``find_singletons`` and ``find_missing_scripts`` so they default
+# to showing only user-owned scripts.
+#
+# Matching is done on the path's relative parts (OS-normalized by splitting
+# on both separators), not substring — so a file named
+# ``Assets/MyPluginsHelper.cs`` is NOT treated as third-party just because
+# it contains the substring "Plugins".
+_THIRD_PARTY_SEGMENTS: frozenset[str] = frozenset(
+    {
+        "Plugins",
+        "Feel",
+        "ThirdParty",
+        "Third Party",
+        "Standard Assets",
+        "Samples",
+        "Editor Default Resources",
+        # TMP ships demo scripts in this subtree; they're rarely the user's.
+        "Examples & Extras",
+    }
+)
+
+
+def _split_path_parts(path: str) -> list[str]:
+    """OS-agnostic split of a project-relative path into segments."""
+    if not path:
+        return []
+    # Handle both Windows and POSIX separators regardless of where we run.
+    normalized = path.replace("\\", "/")
+    return [p for p in normalized.split("/") if p]
+
+
+def _is_user_script(node: Node) -> bool:
+    """True if ``node`` is a user-owned Script (editable by the developer).
+
+    Criteria (all must hold):
+
+    * Node type is Script
+    * ``external`` is not True (placeholder for unresolved guids)
+    * ``file_path`` is under ``Assets/`` or under a user-embedded
+      ``Packages/<name>/`` — not under ``Library/`` or a third-party
+      asset-pack directory
+    """
+    if node.type != "Script":
+        return False
+    if node.data.get("external") is True:
+        return False
+    parts = _split_path_parts(str(node.data.get("file_path") or ""))
+    if not parts:
+        return False
+    if "Library" in parts:
+        return False
+    if _THIRD_PARTY_SEGMENTS & set(parts):
+        return False
+    # Accept Assets/ and Packages/ (the latter for user-embedded packages;
+    # Library/PackageCache is already filtered above).
+    return parts[0] in {"Assets", "Packages"}
+
 
 def _norm(name: str) -> str:
     return name.strip().lower()
@@ -182,12 +241,24 @@ def impact_of(graph: Graph, script_name: str, *, hops: int = 2) -> dict[str, Any
     }
 
 
-def find_singletons(graph: Graph, *, min_attachments: int = 2) -> dict[str, Any]:
+def find_singletons(
+    graph: Graph,
+    *,
+    min_attachments: int = 2,
+    user_only: bool = True,
+) -> dict[str, Any]:
     """Scripts attached to ``min_attachments`` or more GameObjects.
 
     These are the "used everywhere" scripts — changing them has
     disproportionate reach. Results carry the full set of attachment
     sites so an agent can decide whether a rename is safe.
+
+    ``user_only`` (default True) restricts results to scripts the
+    developer actually owns — drops Unity built-ins (Image, Button,
+    TextMeshPro, …), third-party asset packs (Feel, Plugins, Standard
+    Assets), and unresolved ``external`` placeholders. Set to False
+    to see every script regardless of ownership — useful when auditing
+    a project you didn't write.
     """
     if min_attachments < 1:
         min_attachments = 1
@@ -201,6 +272,8 @@ def find_singletons(graph: Graph, *, min_attachments: int = 2) -> dict[str, Any]
     hits: list[dict[str, Any]] = []
     for node in graph.nodes:
         if node.type != "Script":
+            continue
+        if user_only and not _is_user_script(node):
             continue
         edges = attachments.get(node.id, [])
         if len(edges) < min_attachments:
@@ -375,16 +448,23 @@ def event_listeners(graph: Graph, script_name: str) -> dict[str, Any]:
     }
 
 
-def find_missing_scripts(graph: Graph) -> dict[str, Any]:
+def find_missing_scripts(graph: Graph, *, min_attachments: int = 1) -> dict[str, Any]:
     """Script nodes marked ``external=true`` — script_guid referenced but
     no matching .cs found.
 
-    These often indicate:
+    These usually indicate:
     * a prefab/scene that references a deleted script (the classic
       Unity "Missing script (Mono Script)" warning), or
-    * a third-party package script outside our scan (still needs the
-      developer to know it's there before refactoring).
+    * a third-party package script that was stripped or renamed.
+
+    ``min_attachments`` filters out placeholders with no live attachments
+    (stale guids that won't actually show up in the Unity Editor). Default
+    is 1 — only report placeholders that are actually referenced by at
+    least one GameObject.
     """
+    if min_attachments < 0:
+        min_attachments = 0
+
     placeholders: list[Node] = [
         n for n in graph.nodes if n.type == "Script" and n.data.get("external") is True
     ]
@@ -398,6 +478,8 @@ def find_missing_scripts(graph: Graph) -> dict[str, Any]:
     out: list[dict[str, Any]] = []
     for n in placeholders:
         targets = attachments.get(n.id, [])
+        if len(targets) < min_attachments:
+            continue
         out.append(
             {
                 "script_id": n.id,

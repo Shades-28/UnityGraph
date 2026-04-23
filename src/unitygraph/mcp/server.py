@@ -159,11 +159,17 @@ def build_server(graph_path: Path) -> FastMCP:
         description=(
             "Scripts attached to `min_attachments` or more GameObjects across "
             "the project. These are 'used everywhere' — renames and API "
-            "changes have outsize blast radius."
+            "changes have outsize blast radius. `user_only` (default true) "
+            "drops Unity built-ins, third-party asset packs, and unresolved "
+            "placeholders; set false to see everything."
         )
     )
-    def find_singletons(min_attachments: int = 2) -> dict[str, Any]:
-        return gqueries.find_singletons(graph_ref.current(), min_attachments=min_attachments)
+    def find_singletons(min_attachments: int = 2, user_only: bool = True) -> dict[str, Any]:
+        return gqueries.find_singletons(
+            graph_ref.current(),
+            min_attachments=min_attachments,
+            user_only=user_only,
+        )
 
     @server.tool(
         description=(
@@ -200,11 +206,15 @@ def build_server(graph_path: Path) -> FastMCP:
         description=(
             "Placeholder Script nodes — scene/prefab references to a "
             "script_guid that doesn't resolve to a .cs file in this project. "
-            "Usually indicates missing scripts or third-party packages."
+            "Usually indicates a deleted script, a renamed class, or a "
+            "stripped package. `min_attachments` (default 1) filters out "
+            "placeholders with no live references."
         )
     )
-    def find_missing_scripts() -> dict[str, Any]:
-        return gqueries.find_missing_scripts(graph_ref.current())
+    def find_missing_scripts(min_attachments: int = 1) -> dict[str, Any]:
+        return gqueries.find_missing_scripts(
+            graph_ref.current(), min_attachments=min_attachments
+        )
 
     return server
 
