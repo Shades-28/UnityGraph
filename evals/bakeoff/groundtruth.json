@@ -1,0 +1,233 @@
+[
+  {
+    "id": "q1",
+    "tier": 1,
+    "question": "What does EnemyController.SpawnEnemy() do? Summarize in one sentence.",
+    "ground_truth": "Calls EnemyDatabase.GetRandomEnemy(), pools an instance, parents it, calls EnemyBase.Spawn() on it.",
+    "evidence_file": "Assets/_Assets/Scripts/Enemy/EnemyController.cs",
+    "evidence_lines": [
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84
+    ],
+    "method_body_first_line": 74
+  },
+  {
+    "id": "q2",
+    "tier": 1,
+    "question": "What class does EnemyBase inherit from?",
+    "ground_truth": "MonoBehaviour",
+    "evidence_file": "Assets/_Assets/Scripts/Enemy/EnemyBase.cs",
+    "snippet": "public abstract class EnemyBase : MonoBehaviour"
+  },
+  {
+    "id": "q3",
+    "tier": 2,
+    "question": "Which scripts call GetComponent<EnemyBase>()? List each with the file path and method name.",
+    "ground_truth": [
+      {
+        "caller": "EnemyController",
+        "file": "Assets\\_Assets\\Scripts\\Enemy\\EnemyController.cs",
+        "line": 80,
+        "method": "SpawnEnemy",
+        "snippet": "enemy.GetComponent<EnemyBase>()"
+      }
+    ],
+    "expected_count": 1
+  },
+  {
+    "id": "q4",
+    "tier": 2,
+    "question": "How many distinct method calls does CharacterBehaviour make on CharacterAnimator?",
+    "ground_truth_count": 8,
+    "evidence": [
+      {
+        "line": 48,
+        "snippet": "characterAnimator.SetFloat(\"MovementX\", local.x)"
+      },
+      {
+        "line": 49,
+        "snippet": "characterAnimator.SetFloat(\"MovementY\", local.z)"
+      },
+      {
+        "line": 53,
+        "snippet": "characterAnimator.SetFloat(\"MovementX\", 0)"
+      },
+      {
+        "line": 54,
+        "snippet": "characterAnimator.SetFloat(\"MovementY\", 1)"
+      },
+      {
+        "line": 57,
+        "snippet": "characterAnimator.SetAnimation(UtilityEnums.AnimationType.Move, 1)"
+      },
+      {
+        "line": 61,
+        "snippet": "characterAnimator.SetAnimation(UtilityEnums.AnimationType.Idle)"
+      },
+      {
+        "line": 69,
+        "snippet": "characterAnimator.SetAnimation(UtilityEnums.AnimationType.Climb)"
+      },
+      {
+        "line": 70,
+        "snippet": "characterAnimator.SetAnimation(UtilityEnums.AnimationType.Idle)"
+      }
+    ]
+  },
+  {
+    "id": "q5",
+    "tier": 3,
+    "question": "On the EnemyController in the game scene, what is the actual spawnRadius value at runtime, and does it match the code default?",
+    "ground_truth": {
+      "scene_value": 10,
+      "code_default": "12f",
+      "matches_default": false,
+      "all_scalar_overrides": [
+        {
+          "gameobject": "EnemyController",
+          "field": "spawnRadius",
+          "inspector_value": 10,
+          "code_default": "12f"
+        },
+        {
+          "gameobject": "EnemyController",
+          "field": "despawnRadius",
+          "inspector_value": 12,
+          "code_default": "20f"
+        },
+        {
+          "gameobject": "EnemyController",
+          "field": "drawDebugRadius",
+          "inspector_value": 1,
+          "code_default": "true"
+        }
+      ]
+    }
+  },
+  {
+    "id": "q6",
+    "tier": 3,
+    "question": "Which methods on RateUsScript are bound as UnityEvent listeners? (i.e., wired up via the Inspector, not invoked from code)",
+    "ground_truth_methods": [
+      "OpenRateUsPage",
+      "RateUsGame"
+    ],
+    "ground_truth_count": 6,
+    "evidence": [
+      {
+        "method": "OpenRateUsPage",
+        "field": "m_OnClick",
+        "site_file": "Assets\\_Assets\\Prefab\\Rate_Us\\Rate_Us_Panel.prefab",
+        "site_line": 435
+      },
+      {
+        "method": "RateUsGame",
+        "field": "m_OnClick",
+        "site_file": "Assets\\_Assets\\Prefab\\Rate_Us\\Rate_Us_Panel.prefab",
+        "site_line": 567
+      },
+      {
+        "method": "RateUsGame",
+        "field": "m_OnClick",
+        "site_file": "Assets\\_Assets\\Prefab\\Rate_Us\\Rate_Us_Panel.prefab",
+        "site_line": 699
+      },
+      {
+        "method": "RateUsGame",
+        "field": "m_OnClick",
+        "site_file": "Assets\\_Assets\\Prefab\\Rate_Us\\Rate_Us_Panel.prefab",
+        "site_line": 831
+      },
+      {
+        "method": "RateUsGame",
+        "field": "m_OnClick",
+        "site_file": "Assets\\_Assets\\Prefab\\Rate_Us\\Rate_Us_Panel.prefab",
+        "site_line": 1316
+      },
+      {
+        "method": "RateUsGame",
+        "field": "m_OnClick",
+        "site_file": "Assets\\_Assets\\Prefab\\Rate_Us\\Rate_Us_Panel.prefab",
+        "site_line": 1448
+      }
+    ]
+  },
+  {
+    "id": "q7",
+    "tier": 3,
+    "question": "Are there any GameObjects in this project with broken/missing script references? How many?",
+    "ground_truth_count": 15,
+    "top_5_by_impact": [
+      {
+        "guid": "fe87c0e1",
+        "attachment_count": 359
+      },
+      {
+        "guid": "f5f67c52",
+        "attachment_count": 236
+      },
+      {
+        "guid": "f70555f1",
+        "attachment_count": 122
+      },
+      {
+        "guid": "5f7201a1",
+        "attachment_count": 113
+      },
+      {
+        "guid": "f4688fdb",
+        "attachment_count": 52
+      }
+    ]
+  },
+  {
+    "id": "q8",
+    "tier": 4,
+    "question": "I want to rename `CharacterAnimator.SetAnimation` to a different name. Will any UnityEvent wiring or other callers break? List everything that needs updating.",
+    "ground_truth": {
+      "method_defined_at": [
+        [
+          22,
+          "    public void SetAnimation(UtilityEnums.AnimationType animation, float transitionTime = 0.1f)"
+        ]
+      ],
+      "code_callers": [
+        {
+          "caller": "CharacterBehaviour",
+          "file": "Assets\\_Assets\\Scripts\\Characters\\CharacterBehaviour.cs",
+          "line": 57,
+          "snippet": "characterAnimator.SetAnimation(UtilityEnums.AnimationType.Move, 1)"
+        },
+        {
+          "caller": "CharacterBehaviour",
+          "file": "Assets\\_Assets\\Scripts\\Characters\\CharacterBehaviour.cs",
+          "line": 61,
+          "snippet": "characterAnimator.SetAnimation(UtilityEnums.AnimationType.Idle)"
+        },
+        {
+          "caller": "CharacterBehaviour",
+          "file": "Assets\\_Assets\\Scripts\\Characters\\CharacterBehaviour.cs",
+          "line": 69,
+          "snippet": "characterAnimator.SetAnimation(UtilityEnums.AnimationType.Climb)"
+        },
+        {
+          "caller": "CharacterBehaviour",
+          "file": "Assets\\_Assets\\Scripts\\Characters\\CharacterBehaviour.cs",
+          "line": 70,
+          "snippet": "characterAnimator.SetAnimation(UtilityEnums.AnimationType.Idle)"
+        }
+      ],
+      "unityevent_listeners": [],
+      "summary": "4 code call site(s); 0 UnityEvent listener(s)"
+    }
+  }
+]

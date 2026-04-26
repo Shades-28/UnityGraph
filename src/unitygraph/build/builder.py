@@ -145,6 +145,14 @@ def build_project(
             primary = next((c for c in parsed.classes if c.name == path.stem), parsed.classes[0])
             script_class_by_guid[guid] = (primary, path)
 
+    # 3b. (v2.1.2) Resolve member-access calls whose receiver is inherited.
+    # The C# parser sees one file at a time, so it can't resolve
+    # ``base_field.Method(...)`` when ``base_field`` is declared on a
+    # parent class. Now that every class is parsed, walk each class's
+    # inheritance chain and look up the receiver in ancestors' field maps.
+    # On match, promote the unresolved call into ``field_method_calls``.
+    _resolve_inherited_member_calls(parsed_scripts)
+
     # 4. Emit Script nodes + code-side edges with sites[].
     # Track edges by (from, to, type) so we can merge multiple call sites
     # onto a single edge — Roslyn-style.
@@ -409,6 +417,77 @@ def _discover(root: Path, pattern: str, *, skip_generated: bool) -> list[Path]:
                 continue
         out.append(path)
     return out
+
+
+def _resolve_inherited_member_calls(
+    parsed_scripts: list[tuple[Path, list[cs_parser.ClassInfo]]],
+) -> None:
+    """Walk inheritance chains to resolve receivers declared on a parent.
+
+    The C# parser only sees fields declared on the current class. For
+    a subclass that calls a method on an inherited field
+    (``protected CharacterAnimator animator;`` declared on ``EnemyBase``,
+    used by ``EnemyMelee.animator.SetAnimation(...)``), the parser
+    records the call as *unresolved* — receiver name without a type.
+
+    Once every script has been parsed, we have a global view of class
+    declarations. Build a name → ClassInfo index, then for each class
+    walk its base_class chain looking for a matching field. On match,
+    rewrite the unresolved CallSite's ``target`` to the field's declared
+    type and promote it to ``field_method_calls``.
+
+    This is conservative — only field receivers are resolved (properties
+    and locals are still missed by the parser entirely). Self-call
+    chains, name shadowing, and partial classes are also out of scope.
+    Cycle-safe via a ``seen`` set.
+    """
+    classes_by_name: dict[str, cs_parser.ClassInfo] = {}
+    for _path, classes in parsed_scripts:
+        for klass in classes:
+            # If the same class name appears in multiple files (rare but
+            # legal — e.g. partial classes split across files), prefer
+            # the one with the most fields. Field collision is the
+            # only thing this lookup matters for.
+            existing = classes_by_name.get(klass.name)
+            if existing is None or len(klass.field_types) > len(existing.field_types):
+                classes_by_name[klass.name] = klass
+
+    def _lookup_inherited_field_type(start_class: str, receiver: str) -> str | None:
+        seen: set[str] = set()
+        current = classes_by_name.get(start_class)
+        while current is not None and current.base_class:
+            if current.base_class in seen:
+                return None
+            seen.add(current.base_class)
+            parent = classes_by_name.get(current.base_class)
+            if parent is None:
+                # Hit an external/unknown base (MonoBehaviour, third-party)
+                # — chain stops, receiver stays unresolved. Fine.
+                return None
+            # field_types includes private/protected fields, which is the
+            # whole point of this pass — protected/inherited members live
+            # outside the public-only ``fields`` list.
+            if receiver in parent.field_types:
+                return parent.field_types[receiver]
+            current = parent
+        return None
+
+    for _path, classes in parsed_scripts:
+        for klass in classes:
+            if not klass.unresolved_member_calls:
+                continue
+            still_unresolved: list[cs_parser.CallSite] = []
+            for call in klass.unresolved_member_calls:
+                resolved_type = _lookup_inherited_field_type(klass.name, call.target)
+                if resolved_type is not None:
+                    # ``call.target`` was the receiver name; replace with
+                    # the actual type so the rest of the builder treats
+                    # this exactly like a same-class field method call.
+                    call.target = resolved_type
+                    klass.field_method_calls.append(call)
+                else:
+                    still_unresolved.append(call)
+            klass.unresolved_member_calls = still_unresolved
 
 
 def _script_type(klass: cs_parser.ClassInfo) -> str:

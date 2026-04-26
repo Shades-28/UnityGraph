@@ -105,6 +105,18 @@ class ClassInfo:
     # entry's ``target`` is the receiver identifier, which the builder
     # resolves to the field's declared type.
     field_method_calls: list[CallSite] = field(default_factory=list)
+    # v2.1.2: member-access calls whose receiver is NOT a field of this
+    # class — usually inherited from a parent class. The receiver name is
+    # captured here; the builder resolves it across the inheritance chain
+    # and promotes the matched ones into ``field_method_calls``. The
+    # CallSite's ``target`` field starts as the unresolved receiver name
+    # and is replaced with the actual type once the chain walk finds it.
+    unresolved_member_calls: list[CallSite] = field(default_factory=list)
+    # v2.1.2: every field declared on this class with its type — including
+    # non-serialized (private/protected) fields, which never make it into
+    # ``fields``. Used by the builder's inheritance-chain walk to resolve
+    # method calls on inherited fields.
+    field_types: dict[str, str] = field(default_factory=dict)
     # Source span of the class itself (for Rationale harvesting later).
     class_line: int = 0
     class_end_line: int = 0
@@ -307,6 +319,9 @@ class _Visitor:
             # Always record the field's declared type so the visitor can
             # resolve `_x.Method()` later — even for non-serialized fields.
             self._field_types[field_name] = type_name
+            # v2.1.2: also record on the class itself, so inherited-field
+            # resolution can walk the chain across files.
+            info.field_types[field_name] = type_name
             if not is_serialized:
                 continue
             info.fields.append(
@@ -388,6 +403,22 @@ class _Visitor:
                                     containing_method,
                                     member,
                                     target_type,
+                                )
+                            )
+                        else:
+                            # Receiver isn't a field of this class. Likely
+                            # inherited from a parent (very common in Unity:
+                            # subclasses calling methods on base-class fields).
+                            # Stash with the receiver name as ``target`` so
+                            # the builder can resolve via the inheritance
+                            # chain once every class in the project is parsed.
+                            info.unresolved_member_calls.append(
+                                self._make_call_site(
+                                    node,
+                                    info,
+                                    containing_method,
+                                    member,
+                                    receiver,
                                 )
                             )
         for child in node.children:

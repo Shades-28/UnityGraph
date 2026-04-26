@@ -22,7 +22,9 @@ from pathlib import Path
 # Bump when any parser's output schema changes in an incompatible way.
 # v3: v2.1.0 — guid index now filters Library/PackageCache; cached
 # placeholder Script nodes from earlier builds must be rebuilt.
-PARSER_VERSION = 3
+# v4: v2.1.2 — ClassInfo gained ``unresolved_member_calls`` for inheritance
+# resolution; older pickles miss the attribute and would silently degrade.
+PARSER_VERSION = 4
 
 
 @dataclass
