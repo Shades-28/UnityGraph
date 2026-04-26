@@ -1,5 +1,7 @@
 # UnityGraph
 
+![UnityGraph: AI agents read your code. UnityGraph shows them your game.](docs/media/hero-bridge.png)
+
 **Make Unity projects queryable for any AI coding agent.**
 
 Your AI agent can read your `.cs` files. It cannot open your Unity scene.
@@ -48,6 +50,14 @@ unitygraph viz graph-out/graph.json   # opens at http://127.0.0.1:7842
 The Observatory loads the demo's force-directed graph in your browser.
 **Click any orange edge** to see the source-level evidence popover --
 file:line:snippet for every relationship.
+
+![Observatory: click any edge to see its source-level evidence](docs/media/observatory-evidence.png)
+
+### See it in action
+
+> **[Watch the Observatory demo on YouTube](https://youtu.be/23-Hw99vl9o)**
+> A walkthrough on a real Unity project (~6,000 nodes, 7,750 edges). Click
+> any edge, see its source evidence.
 
 ---
 
@@ -126,9 +136,15 @@ same questions, across three real projects of increasing size. Drive
 it with `python evals/bakeoff/focused_run.py` after pointing
 `UNITYGRAPH_EVAL_ROOT` at your local Unity-project corpus.
 
-Headline: on a small project, both approaches mostly tie. On a large
-project (1,500+ scripts), **UnityGraph wins 5/7 questions decisively**
-because baseline runs into the cost wall -- e.g., 6,660 Inspector
+![Bake-off results: who answers correctly?](docs/media/bakeoff-chart.png)
+
+**Headline**: on Tier 1 (pure-code questions answerable by reading one
+.cs file), baseline grep is fine -- UnityGraph doesn't claim otherwise.
+On Tier 3 (scene-code-gap questions: Inspector overrides, UnityEvent
+wirings, prefab variants) UnityGraph wins decisively because baseline
+literally cannot answer without re-implementing UnityGraph's guid
+index in grep. On Tier 4 (refactor planning across cross-asset
+boundaries), baseline runs into the cost wall -- e.g., 6,660 Inspector
 overrides on a single script across 1,110 attachments isn't something
 a developer can grep their way through in conversation.
 
@@ -138,6 +154,10 @@ stored (it points you at the file:line), return types aren't tracked
 (`SendMessage`, `Invoke`) isn't typed and can't be tracked. An agent
 combining UnityGraph queries + file tools is strictly better than either
 alone.
+
+For the full methodology, ground-truth verification, per-question
+breakdown, and reproducible harness, see
+[`docs/whitepaper.md`](docs/whitepaper.md).
 
 ---
 
@@ -176,6 +196,8 @@ upgrade. No manual cache invalidation needed.
 ---
 
 ## Architecture
+
+![UnityGraph architecture: source files in, MCP query library out](docs/media/architecture.png)
 
 UnityGraph is **middleware**. It does not chat. It does not call an LLM.
 It does one thing -- turn Unity projects into a queryable graph that any
