@@ -4,6 +4,25 @@ All notable changes to UnityGraph. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [SemVer](https://semver.org/).
 
+## [2.1.4]
+
+### Fixed
+- The `.mcp.json` template that `unitygraph init` writes used to point
+  at `python -m unitygraph.serve`. That command fails when the user
+  installed via `pipx install unitygraph` (the recommended path),
+  because the system `python` doesn't have the package -- pipx puts
+  it in an isolated venv. As a result, opening Claude Code in a
+  project initialized this way produced `ModuleNotFoundError`. Fixed
+  by switching the template to `unitygraph serve` (the binary on
+  PATH, which works for both pipx and pip installs). Also updated
+  the demo template that ships in the wheel.
+
+### Added
+- README "Don't want to think about it?" section walks Unity devs
+  through having Claude Code itself install UnityGraph in their
+  project via natural language -- the closest equivalent to graphify's
+  one-line npx setup, given Python's lack of a universal launcher.
+
 ## [2.1.3]
 
 ### Fixed

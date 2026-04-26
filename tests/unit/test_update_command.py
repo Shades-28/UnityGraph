@@ -47,7 +47,9 @@ def test_update_refreshes_stale_template(tmp_path):
     assert result.exit_code == 0
     assert "updated:" in result.output
     # After update, the file should contain the real template.
-    assert "unitygraph.serve" in mcp.read_text(encoding="utf-8")
+    # v2.1.4: template uses 'unitygraph serve' (binary on PATH) instead of
+    # 'python -m unitygraph.serve' (which fails for pipx-installed users).
+    assert '"command": "unitygraph"' in mcp.read_text(encoding="utf-8")
 
 
 def test_update_preserves_user_edited_claude_md(tmp_path):
