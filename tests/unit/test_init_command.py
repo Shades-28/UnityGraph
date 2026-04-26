@@ -114,3 +114,18 @@ def test_init_demo_refuses_to_overwrite_existing_directory(tmp_path):
     result = runner.invoke(main, ["init", str(project), "--demo"])
     assert result.exit_code != 0
     assert (project / "important.txt").exists(), "must not have wiped existing contents"
+
+
+def test_init_demo_accepts_empty_existing_directory(tmp_path):
+    """v2.1.3 regression: `unitygraph init --demo .` against an empty
+    existing directory must succeed. Was crashing in shutil.copytree
+    because dirs_exist_ok=False refused even an empty target.
+    """
+    project = tmp_path / "empty"
+    project.mkdir()  # exists but empty -- like `mkdir foo; cd foo; unitygraph init --demo .`
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["init", str(project), "--demo"])
+    assert result.exit_code == 0, result.output
+    assert (project / "Assets").is_dir()
+    assert (project / "CLAUDE.md").exists()

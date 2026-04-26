@@ -141,7 +141,10 @@ def init(project_path: str, force: bool, no_skill: bool, demo: bool) -> None:
             raise click.Abort()
         import shutil
 
-        shutil.copytree(demo_src, project, dirs_exist_ok=False)
+        # dirs_exist_ok=True so the user can pass `.` against an empty
+        # cwd. The "exists and not empty" guard above is what actually
+        # prevents accidental clobbers.
+        shutil.copytree(demo_src, project, dirs_exist_ok=True)
         click.echo(f"scaffolded demo project at {project}")
     elif not project.exists():
         click.echo(

@@ -4,6 +4,16 @@ All notable changes to UnityGraph. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [SemVer](https://semver.org/).
 
+## [2.1.3]
+
+### Fixed
+- `unitygraph init --demo .` against an empty existing directory used
+  to crash with `FileExistsError` because `shutil.copytree` was called
+  with `dirs_exist_ok=False`. The "exists and not empty" guard above
+  it already prevents accidental clobbers, so the safe fix is to allow
+  copytree into an empty target. New regression test in
+  `tests/unit/test_init_command.py`.
+
 ## [2.1.2]
 
 ### Fixed

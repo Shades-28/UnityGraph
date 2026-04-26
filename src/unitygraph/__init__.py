@@ -1,3 +1,3 @@
 """UnityGraph -- autonomous Unity developer system for Claude Code."""
 
-__version__ = "2.1.2"
+__version__ = "2.1.3"
