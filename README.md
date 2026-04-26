@@ -38,22 +38,21 @@ unitygraph build .
 # Done. Open your editor -- the MCP server is auto-detected.
 ```
 
-### Don't want to think about it? Let your AI agent do it.
+### One-line install via Claude Code
 
-If you have Claude Code (or any MCP-aware agent) open in your Unity
-project, paste this into the chat and the agent handles the rest:
+Have Claude Code (or any MCP-aware agent) open in your Unity project?
+Paste this:
 
-> Please install UnityGraph in this Unity project. The README is at
-> https://github.com/Shades-28/UnityGraph -- follow the Quick start
-> section. Verify Python 3.11+ is on PATH first, then run the install
-> and init commands.
+> `Install UnityGraph in this Unity project: https://github.com/Shades-28/UnityGraph`
 
-The agent will check Python, run `pip install unitygraph`, run
-`unitygraph init .`, run `unitygraph build .`, and confirm the MCP
-server is reachable. If anything fails, it tells you why. **This is
-the closest UnityGraph gets to a one-click install today.** A native
-Unity Package Manager (UPM) wrapper that bundles the runtime is
-planned for v2.2 and will remove the Python prerequisite entirely.
+The agent reads the README, checks for Python 3.11+, installs via
+pipx, runs `unitygraph init .`, builds the graph, and verifies the
+MCP server. **One line, one paste, done.** If anything fails (e.g.
+Python missing), the agent tells you and stops -- no half-installed
+state.
+
+A native Unity Package Manager (UPM) wrapper that bundles the runtime
+is planned for v2.2 and will remove the Python prerequisite entirely.
 
 **Don't have a Unity project to test on?** Try the bundled demo:
 
