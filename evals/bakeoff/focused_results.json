@@ -1,0 +1,103 @@
+[
+  {
+    "project": "clash.io",
+    "q5_inspector": {
+      "script": "IndicatorTarget",
+      "scalar_overrides": 9
+    },
+    "q6_unityevent_targets": {
+      "scripts_targeted": 2,
+      "top": [
+        [
+          "RateUsScript",
+          6
+        ],
+        [
+          "JoystickSetterExample",
+          4
+        ]
+      ]
+    },
+    "q7_missing": {
+      "count": 15
+    },
+    "q8_inheritance_pairs": 18,
+    "q10_list_usertype": 13,
+    "q13_top_singleton": {
+      "name": "CharacterAnimator",
+      "attachments": 4,
+      "scopes": 4
+    },
+    "q15_inheritance": {
+      "base": "BaseScreen",
+      "subclass_count": 7
+    },
+    "q16": "out-of-scope (UnityGraph honest)"
+  },
+  {
+    "project": "Indian Bike",
+    "q5_inspector": {
+      "script": null,
+      "scalar_overrides": 0
+    },
+    "q6_unityevent_targets": {
+      "scripts_targeted": 0,
+      "top": []
+    },
+    "q7_missing": {
+      "count": 2
+    },
+    "q8_inheritance_pairs": 0,
+    "q10_list_usertype": 0,
+    "q13_top_singleton": null,
+    "q15_inheritance": null,
+    "q16": "out-of-scope (UnityGraph honest)"
+  },
+  {
+    "project": "Graudation-Saga",
+    "q5_inspector": {
+      "script": "SplineComputer",
+      "scalar_overrides": 6660
+    },
+    "q6_unityevent_targets": {
+      "scripts_targeted": 23,
+      "top": [
+        [
+          "ETFXSceneManager",
+          43
+        ],
+        [
+          "PEButtonScript",
+          18
+        ],
+        [
+          "FBWindowsExampleTabsManager",
+          12
+        ],
+        [
+          "ETFXFireProjectile",
+          11
+        ],
+        [
+          "FBWindowsTournamentsManager",
+          5
+        ]
+      ]
+    },
+    "q7_missing": {
+      "count": 25
+    },
+    "q8_inheritance_pairs": 175,
+    "q10_list_usertype": 81,
+    "q13_top_singleton": {
+      "name": "SplineComputer",
+      "attachments": 1110,
+      "scopes": 14
+    },
+    "q15_inheritance": {
+      "base": "ITask",
+      "subclass_count": 14
+    },
+    "q16": "out-of-scope (UnityGraph honest)"
+  }
+]

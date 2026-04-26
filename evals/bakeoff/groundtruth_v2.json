@@ -1,0 +1,114 @@
+[
+  {
+    "id": "q9",
+    "tier": 1,
+    "question": "Does EnemyBase declare a property called Health, or a field, or neither? Cite the exact line.",
+    "ground_truth": {
+      "has_property_Health": false,
+      "has_field_Health": false,
+      "lines_mentioning_Health": []
+    }
+  },
+  {
+    "id": "q10",
+    "tier": 2,
+    "question": "List<T> declarations where T is a user-defined class. Return file, line, and the user type.",
+    "ground_truth": [
+      {
+        "file": "Assets/_Assets/Scripts/Pooling/PoolingController.cs",
+        "line": 17,
+        "snippet": "private List<PoolEntry> PoolEntries = new List<PoolEntry>();",
+        "user_type": "PoolEntry"
+      },
+      {
+        "file": "Assets/_Assets/Scripts/Pooling/PoolingController.cs",
+        "line": 17,
+        "snippet": "private List<PoolEntry> PoolEntries = new List<PoolEntry>();",
+        "user_type": "PoolEntry"
+      },
+      {
+        "file": "Assets/_Assets/Scripts/Utilities/UtilityClasses.cs",
+        "line": 91,
+        "snippet": "[TitleGroup(\"WaveEnemys\")] public List<WaveEnemyData> EnemyGroups;",
+        "user_type": "WaveEnemyData"
+      },
+      {
+        "file": "Assets/_Assets/Scripts/Utilities/UtilityClasses.cs",
+        "line": 137,
+        "snippet": "[TitleGroup(\"EnemyDefinitions\")] public List<EnemyDefinitionData> enemies = new List<EnemyDefinitionData>();",
+        "user_type": "EnemyDefinitionData"
+      },
+      {
+        "file": "Assets/_Assets/Scripts/Utilities/UtilityClasses.cs",
+        "line": 137,
+        "snippet": "[TitleGroup(\"EnemyDefinitions\")] public List<EnemyDefinitionData> enemies = new List<EnemyDefinitionData>();",
+        "user_type": "EnemyDefinitionData"
+      }
+    ],
+    "expected_count": 5
+  },
+  {
+    "id": "q11",
+    "tier": 1,
+    "question": "How many methods in the project (excluding Plugins/Editor/etc) declare 'async Task', 'async void', or 'async UniTask'? List by class.",
+    "ground_truth": [],
+    "expected_count": 0
+  },
+  {
+    "id": "q12",
+    "tier": 2,
+    "question": "Which user scripts implement IPointerClickHandler? List class and file.",
+    "ground_truth": [],
+    "expected_count": 0
+  },
+  {
+    "id": "q13",
+    "tier": 3,
+    "question": "How many distinct scenes/prefabs reference CharacterAnimator? List them.",
+    "ground_truth": {
+      "guid": "f7eaa2c67e9eded4f8fe59eaeb4dcdeb",
+      "scope_count": 4,
+      "scopes": [
+        "Assets/_Assets/Prefab/Characters/Enemy/Enemies/Melee/Goblin.prefab",
+        "Assets/_Assets/Prefab/Characters/Enemy/Enemies/Melee/Golem.prefab",
+        "Assets/_Assets/Prefab/Characters/Enemy/Enemies/Melee/Orc.prefab",
+        "Assets/_Assets/Scene/DevScene.unity"
+      ]
+    }
+  },
+  {
+    "id": "q14",
+    "tier": 3,
+    "question": "Across the EnemyController instance in DevScene.unity, how many serialized fields have scene values that differ from the code default?",
+    "ground_truth": {
+      "answer": 3,
+      "fields": [
+        "spawnRadius (10 vs 12f)",
+        "despawnRadius (12 vs 20f)",
+        "drawDebugRadius (1 vs true)"
+      ]
+    }
+  },
+  {
+    "id": "q15",
+    "tier": 4,
+    "question": "List every subclass of EnemyBase. For each, note any depends_on relationships its methods create.",
+    "ground_truth": {
+      "subclasses": [
+        {
+          "class": "EnemyMelee",
+          "file": "Assets/_Assets/Scripts/Enemy/EnemyInstances/EnemyMelee.cs",
+          "line": 4
+        }
+      ],
+      "expected_count": 1
+    }
+  },
+  {
+    "id": "q16",
+    "tier": 4,
+    "question": "Are there scripts that dispatch via SendMessage / BroadcastMessage / Invoke (string-based, not typed)? List source location and target method name.",
+    "ground_truth": [],
+    "expected_count": 0
+  }
+]
