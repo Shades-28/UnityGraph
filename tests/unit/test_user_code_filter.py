@@ -1,6 +1,6 @@
-"""v2.1.0 — user-code filtering for guid index + singleton/missing queries.
+"""v2.1.0 -- user-code filtering for guid index + singleton/missing queries.
 
-Real-project audit (Indian Bike, clash.io, Graudation-Saga) showed that
+Real-project audit (MidsizeProject, clash.io, LargeProject) showed that
 ``Library/PackageCache/`` meta files were leaking into the guid index,
 producing placeholder Script nodes that pointed at unmodifiable package
 code and then dominated ``find_singletons`` / ``find_missing_scripts``
@@ -27,7 +27,7 @@ def _write_meta(dir_: Path, name: str, guid: str) -> None:
 
 
 def test_guid_index_skips_library_packagecache(tmp_path):
-    """The real-world Indian Bike/clash.io bug: Library/PackageCache/.../*.cs.meta
+    """The real-world MidsizeProject/clash.io bug: Library/PackageCache/.../*.cs.meta
     was being indexed, so scene references to Unity built-ins resolved to
     Library paths. Lock that out."""
     _write_meta(tmp_path / "Assets" / "Scripts", "MyScript.cs", "a" * 32)
@@ -42,8 +42,8 @@ def test_guid_index_skips_library_packagecache(tmp_path):
 
 
 def test_guid_index_keeps_user_embedded_packages(tmp_path):
-    """Packages/<user-package> is legitimate user source — NOT a Library
-    package cache — and must still be indexed."""
+    """Packages/<user-package> is legitimate user source -- NOT a Library
+    package cache -- and must still be indexed."""
     _write_meta(
         tmp_path / "Packages" / "com.mycompany.toolkit" / "Runtime",
         "Tool.cs",
@@ -61,7 +61,7 @@ def test_guid_index_allows_opt_out_of_skipping(tmp_path):
 
 
 def test_guid_index_skips_temp_and_obj(tmp_path):
-    """Temp/, obj/, Build/ are build artifacts — same treatment as Library."""
+    """Temp/, obj/, Build/ are build artifacts -- same treatment as Library."""
     _write_meta(tmp_path / "Temp" / "gen", "G.cs", "1" * 32)
     _write_meta(tmp_path / "obj" / "Debug", "D.cs", "2" * 32)
     _write_meta(tmp_path / "Build" / "out", "O.cs", "3" * 32)
@@ -119,7 +119,7 @@ def test_is_user_script_rejects_third_party_directories():
 
 def test_is_user_script_does_not_substring_match_plugins():
     """A file named `MyPluginsHelper.cs` sitting directly in Assets/ is
-    user code — 'Plugins' as a path *segment* is what flags third-party."""
+    user code -- 'Plugins' as a path *segment* is what flags third-party."""
     assert queries._is_user_script(_script_node("Assets/MyPluginsHelper.cs"))
 
 

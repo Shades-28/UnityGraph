@@ -35,7 +35,7 @@
     "q16": "out-of-scope (UnityGraph honest)"
   },
   {
-    "project": "Indian Bike",
+    "project": "MidsizeProject",
     "q5_inspector": {
       "script": null,
       "scalar_overrides": 0
@@ -54,7 +54,7 @@
     "q16": "out-of-scope (UnityGraph honest)"
   },
   {
-    "project": "Graudation-Saga",
+    "project": "LargeProject",
     "q5_inspector": {
       "script": "SplineComputer",
       "scalar_overrides": 6660

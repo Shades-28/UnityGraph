@@ -24,10 +24,10 @@ def _external(name: str) -> Path:
 @pytest.mark.parametrize(
     "project_name,max_skip_pct,max_build_s",
     [
-        pytest.param("Indian-Bike-Gangster-3D", 5.0, 60.0),
+        pytest.param("MidsizeProject", 5.0, 60.0),
         pytest.param("clash.io", 5.0, 60.0),
-        # Graudation-Saga is the stress test — opt-in only via -m slow.
-        pytest.param("Graudation-Saga", 5.0, 600.0, marks=pytest.mark.slow),
+        # LargeProject is the stress test -- opt-in only via -m slow.
+        pytest.param("LargeProject", 5.0, 600.0, marks=pytest.mark.slow),
     ],
 )
 def test_external_project_builds(project_name, max_skip_pct, max_build_s):

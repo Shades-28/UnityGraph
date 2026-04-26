@@ -5,11 +5,11 @@ build-backend = "hatchling.build"
 [project]
 name = "unitygraph"
 version = "2.1.2"
-description = "Autonomous Unity developer system for Claude Code — knowledge graph, context injection, and behavior model."
+description = "Autonomous Unity developer system for Claude Code -- knowledge graph, context injection, and behavior model."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
-authors = [{ name = "RinvalAI" }]
+authors = [{ name = "Aryan Reniwal (shades)" }]
 keywords = ["unity", "claude", "mcp", "knowledge-graph", "llm", "game-development"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -22,7 +22,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    # Layer 1 only — the graph builder + MCP server.
+    # Layer 1 only -- the graph builder + MCP server.
     "pyyaml>=6.0",
     "tree-sitter>=0.21",
     "tree-sitter-c-sharp>=0.21",
@@ -31,13 +31,13 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Layer 2 — context injection (tiktoken for budget, no other new deps).
+# Layer 2 -- context injection (tiktoken for budget, no other new deps).
 inject = [
     "tiktoken>=0.7",
 ]
-# Layer 3 — observation + pattern map. SQLite is stdlib. No new runtime deps.
+# Layer 3 -- observation + pattern map. SQLite is stdlib. No new runtime deps.
 behavior = []
-# UnityBench eval harness — needs the Anthropic SDK for real-API runs.
+# UnityBench eval harness -- needs the Anthropic SDK for real-API runs.
 evals = [
     "anthropic>=0.40",
 ]
@@ -89,5 +89,5 @@ ignore_missing_imports = true
 testpaths = ["tests"]
 addopts = "-ra --strict-markers -m 'not slow'"
 markers = [
-    "slow: long-running tests (Graudation-Saga stress test and similar). Run with `pytest -m slow`.",
+    "slow: long-running tests (large-project stress tests). Run with `pytest -m slow`.",
 ]

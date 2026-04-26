@@ -1,4 +1,4 @@
-"""Integration tests — spawn the real MCP stdio server and call each tool.
+"""Integration tests -- spawn the real MCP stdio server and call each tool.
 
 Uses the MCP client SDK to drive the server the same way Claude Code will.
 Verifies the full pipeline: CLI build → graph.json → MCP server → tool call

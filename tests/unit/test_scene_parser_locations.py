@@ -1,4 +1,4 @@
-"""v1.5.0 — scene parser captures file-level line numbers on UnityEvent
+"""v1.5.0 -- scene parser captures file-level line numbers on UnityEvent
 persistent calls, Inspector values, and prefab overrides.
 """
 
@@ -62,7 +62,7 @@ def test_inspector_value_lines_populated_for_monobehaviour() -> None:
         for c in scene.components
         if c.script_guid and "_maxHealth" in c.inspector_values
     )
-    # Every inspector key we kept should have a line (non-zero) or not — but
+    # Every inspector key we kept should have a line (non-zero) or not -- but
     # at least the top-level keys should resolve.
     assert pc.inspector_value_lines, "expected at least one inspector_value_line"
     for _key, line in pc.inspector_value_lines.items():

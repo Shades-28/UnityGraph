@@ -4,7 +4,7 @@ Keeps a sidecar JSON (``<output>/.parse_cache.json``) that maps
 ``relpath -> (mtime_ns, size, parser_version)``. On the next build, files
 whose (mtime, size) match the cache entry are considered unchanged.
 
-This is NOT a graph diff — the builder still emits a fresh graph every run.
+This is NOT a graph diff -- the builder still emits a fresh graph every run.
 The speedup comes from skipping expensive YAML/tree-sitter parses for files
 that haven't changed. Use ``cache.load_parsed_result(path)`` / ``cache.save_parsed_result``
 for per-file results; a miss just means the builder falls through to the real
@@ -20,9 +20,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 # Bump when any parser's output schema changes in an incompatible way.
-# v3: v2.1.0 — guid index now filters Library/PackageCache; cached
+# v3: v2.1.0 -- guid index now filters Library/PackageCache; cached
 # placeholder Script nodes from earlier builds must be rebuilt.
-# v4: v2.1.2 — ClassInfo gained ``unresolved_member_calls`` for inheritance
+# v4: v2.1.2 -- ClassInfo gained ``unresolved_member_calls`` for inheritance
 # resolution; older pickles miss the attribute and would silently degrade.
 PARSER_VERSION = 4
 

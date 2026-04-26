@@ -71,7 +71,7 @@ def discover_tasks(tasks_dir: Path | None = None) -> list[Task]:
 
 
 # ---------------------------------------------------------------------------
-# Conditions — each builds the prompt context Claude receives.
+# Conditions -- each builds the prompt context Claude receives.
 # ---------------------------------------------------------------------------
 
 
@@ -88,7 +88,7 @@ def build_condition_manual_visual(task: Task) -> str:
     """Manual visual: task + source + a deterministic scene description.
 
     In the paper we'd hand-write these. Here we render a programmatic
-    description from the graph — the upper-bound reference condition.
+    description from the graph -- the upper-bound reference condition.
     """
     base = build_condition_baseline(task)
     if not task.graph_path.exists():
@@ -183,7 +183,7 @@ class TrialScore:
 
 
 def score_response(task: Task, claude_output: str, injected_context_tokens: int) -> TrialScore:
-    """Static scoring — no Unity runtime required.
+    """Static scoring -- no Unity runtime required.
 
     This is a proxy for the full spec §2.5 metric set, suitable for a local
     MVP. A paper-grade run would run the Unity Test Runner per trial.
@@ -260,7 +260,7 @@ def score_response(task: Task, claude_output: str, injected_context_tokens: int)
 
     # 4. Inspector awareness: if the ground truth references a field, the
     # response should too (by the same name). Especially the `requires_scene_context`
-    # tasks — the whole point is that Inspector values must be discovered.
+    # tasks -- the whole point is that Inspector values must be discovered.
     serialized_fields = _serialized_field_names(task)
     inspector_awareness = 1.0
     if task.requires_scene_context and serialized_fields:
@@ -300,7 +300,7 @@ def _patch_line_sets(patch_text: str) -> tuple[list[str], list[str]]:
 
 
 def _token_in_text(token: str, text: str) -> bool:
-    """Word-boundary presence check — ``_speed`` must not match ``_speedMultiplier``.
+    """Word-boundary presence check -- ``_speed`` must not match ``_speedMultiplier``.
 
     We use a simple regex escape + \\b boundaries. This also avoids false
     positives when a short token happens to be a substring of a longer ID.

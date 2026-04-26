@@ -106,7 +106,7 @@ def _render_scene_section(subgraph: Subgraph) -> tuple[list[str], int, int]:
 
     gameobjects = [n for n in subgraph.nodes if n.type == "GameObject"]
     if not gameobjects:
-        lines.append("(no GameObjects matched — retrieval returned only global nodes)")
+        lines.append("(no GameObjects matched -- retrieval returned only global nodes)")
         return lines, scripts_with_inspector, scripts_total
 
     for go in gameobjects:
@@ -219,8 +219,8 @@ _MAX_VALUE_CHARS = 80
 def _fmt_value(value: object) -> str:
     if isinstance(value, float):
         return f"{value:g}"
-    # Collapse big Inspector blobs — UnityEvent persistent-call trees, vectors
-    # with thousands of keyframes, etc. — into a short shape hint so the
+    # Collapse big Inspector blobs -- UnityEvent persistent-call trees, vectors
+    # with thousands of keyframes, etc. -- into a short shape hint so the
     # formatter stays within the token budget on noisy projects.
     if isinstance(value, dict):
         rendered = str(value)
@@ -284,5 +284,5 @@ def trim_to_budget(subgraph: Subgraph, max_nodes: int) -> Subgraph:
     )
 
 
-def _edge_from_json(edge_data: object) -> Edge | None:  # pragma: no cover — helper for readability
+def _edge_from_json(edge_data: object) -> Edge | None:  # pragma: no cover -- helper for readability
     return None

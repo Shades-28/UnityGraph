@@ -5,11 +5,11 @@ The observation log is an append-only JSONL stream under
 
 Events come in three kinds:
 
-- ``injection`` — ``inject_context`` was called. We record the task, the
+- ``injection`` -- ``inject_context`` was called. We record the task, the
   injected block, strategy + confidence, graph identity, seed nodes.
-- ``feedback`` — the developer said the output was correct/incorrect, or
+- ``feedback`` -- the developer said the output was correct/incorrect, or
   the git watcher inferred acceptance from a commit.
-- ``correction`` — the developer changed Claude's output. We record the
+- ``correction`` -- the developer changed Claude's output. We record the
   delta so Layer 3 can extract missing-context patterns from it.
 
 All events share a common header: ``event_type``, ``event_id``,
@@ -146,7 +146,7 @@ def iter_all_events(project_root: Path) -> list[dict[str, Any]]:
 
 
 # ---------------------------------------------------------------------------
-# Session ID helpers — derived from env var or timestamp + random suffix.
+# Session ID helpers -- derived from env var or timestamp + random suffix.
 # ---------------------------------------------------------------------------
 
 

@@ -1,4 +1,4 @@
-"""Integration test for v1.4.0 — builder threads CallSites into edges as Sites."""
+"""Integration test for v1.4.0 -- builder threads CallSites into edges as Sites."""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ def test_v1_4_emits_sites_on_depends_on(graph):
     depends_edges = [e for e in graph.edges if e.type == "depends_on"]
     assert depends_edges, "no depends_on edges found"
     edges_with_sites = [e for e in depends_edges if e.sites]
-    assert edges_with_sites, "no depends_on edge has sites — v1.4 didn't take effect"
+    assert edges_with_sites, "no depends_on edge has sites -- v1.4 didn't take effect"
 
 
 def test_pc_depends_on_health_system_carries_get_component_site(graph):
@@ -54,7 +54,7 @@ def test_pc_depends_on_rigidbody_via_method_call(graph):
         and "PlayerController" in e.from_id
         and ("Rigidbody" in e.to_id or e.data.get("target_type") == "Rigidbody")
     ]
-    # Note: Rigidbody is a Unity built-in, not a user script — so it does
+    # Note: Rigidbody is a Unity built-in, not a user script -- so it does
     # NOT get a Script node in our graph, which means the edge isn't
     # emitted at all. This test documents that current behavior; the
     # sites are still captured on the parser side.
@@ -72,7 +72,7 @@ def test_sites_available_returns_true(graph):
 def test_inherits_edge_carries_site_when_user_class(graph):
     """If we ever add a user-script inheritance to MiniUnityProject, the
     inherits edge should carry a site pointing at the class declaration.
-    For now this is a smoke test — DamagedEvent inherits UnityEvent<int>,
+    For now this is a smoke test -- DamagedEvent inherits UnityEvent<int>,
     UnityEvent isn't a user script, so no edge.
     """
     inherits = [e for e in graph.edges if e.type == "inherits"]

@@ -1,10 +1,10 @@
-"""Headline test — simulates a Claude Code session against the MiniUnityProject graph.
+"""Headline test -- simulates a Claude Code session against the MiniUnityProject graph.
 
 Runs the exact MCP tool sequence that Claude Code is expected to run for the
 speed-proportional-slow bug, asserts the returned data is sufficient to derive
 the correct fix, and writes ``transcript.json`` as the gate-4 evidence for I1.
 
-The transcript is intended to be diffable across runs — a regression here
+The transcript is intended to be diffable across runs -- a regression here
 means the graph or the tools have changed in a way that would break real
 Claude Code sessions.
 """
@@ -80,7 +80,7 @@ def main() -> int:
             "code_default": inspector_resp["matches"][0]["code_defaults"].get("_speed"),
         },
         "proposed_patch": proposed_diff,
-        "verdict": "PASS — graph exposes Inspector override, fix is derivable",
+        "verdict": "PASS -- graph exposes Inspector override, fix is derivable",
     }
     OUT.write_text(json.dumps(transcript, indent=2), encoding="utf-8")
     print(f"[record] wrote {OUT}")

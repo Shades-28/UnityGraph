@@ -1,5 +1,5 @@
 /* =========================================================================
-   UnityGraph Observatory — live force-directed galaxy
+   UnityGraph Observatory -- live force-directed galaxy
    ========================================================================= */
 
 const TYPE_COLORS = {
@@ -48,7 +48,7 @@ const state = {
   nodeTimestamps: new Map(),
   graphInstance: null,
   sse: null,
-  scope: "user",          // "user" (default — usable on huge projects) or "all"
+  scope: "user",          // "user" (default -- usable on huge projects) or "all"
 };
 
 /* -------------------------------------------------------------------------
@@ -170,7 +170,7 @@ function paintNode(node, ctx, globalScale) {
     ctx.fillStyle = "#E8ECF7";
     ctx.shadowBlur = 6;
     ctx.shadowColor = "rgba(5, 7, 13, 0.8)";
-    const label = node.name.length > 26 ? node.name.slice(0, 24) + "…" : node.name;
+    const label = node.name.length > 26 ? node.name.slice(0, 24) + "..." : node.name;
     ctx.fillText(label, x, y + radius + 4 / globalScale);
     ctx.restore();
   }
@@ -414,7 +414,7 @@ function renderChrome() {
 }
 
 function formatNum(n) {
-  if (n == null) return "—";
+  if (n == null) return "--";
   return new Intl.NumberFormat().format(n);
 }
 
@@ -544,7 +544,7 @@ function hideDetail() {
 document.getElementById("detail-close").addEventListener("click", hideDetail);
 
 /* -------------------------------------------------------------------------
-   Evidence popover (v2.0) — click an edge, see where it lives in source
+   Evidence popover (v2.0) -- click an edge, see where it lives in source
    ------------------------------------------------------------------------- */
 
 function showEdgeDetail(link) {
@@ -584,7 +584,7 @@ function showEdgeDetail(link) {
   if (!sites.length) {
     const empty = document.createElement("p");
     empty.className = "empty";
-    empty.textContent = "no evidence sites — this edge was inferred from structure alone.";
+    empty.textContent = "no evidence sites -- this edge was inferred from structure alone.";
     body.appendChild(empty);
   } else {
     const header = document.createElement("dt");
@@ -665,7 +665,7 @@ document.getElementById("filter-external").addEventListener("change", (e) => {
   if (state.forceData) fg.graphData(state.forceData);
 });
 
-// Scope toggle — refetches the graph with a different ?scope=... so huge
+// Scope toggle -- refetches the graph with a different ?scope=... so huge
 // projects can start narrow and opt into the full view.
 for (const id of ["scope-user", "scope-all"]) {
   document.getElementById(id).addEventListener("change", async (e) => {

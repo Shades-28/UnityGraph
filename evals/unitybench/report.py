@@ -76,7 +76,7 @@ def _format_table(summary: dict[tuple[int, str], dict[str, float]], tiers: list[
             row.append(f"{delta:+.3f}")
             lines.append("| " + " | ".join(row) + " |")
 
-    # Headline — I5 gate (static L2 vs baseline) and I9 gate (adaptive L3 vs static L2).
+    # Headline -- I5 gate (static L2 vs baseline) and I9 gate (adaptive L3 vs static L2).
     tier2_baseline = summary.get((2, "baseline"), {}).get("runtime_correctness", 0.0)
     tier2_ug = summary.get((2, "unitygraph"), {}).get("runtime_correctness", 0.0)
     tier2_adaptive = summary.get((2, "unitygraph_adaptive"), {}).get("runtime_correctness", 0.0)
@@ -131,7 +131,7 @@ def main() -> int:
     rows = _load(path)
     summary = summarize(rows)
     tiers = sorted({k[0] for k in summary})
-    print(f"# UnityBench report — {path.name}\n")
+    print(f"# UnityBench report -- {path.name}\n")
     print(f"N trials: {len(rows)}")
     print(_format_table(summary, tiers))
     return 0

@@ -5,7 +5,7 @@ so it matches the Player Inspector speed"*, extract the tokens most likely to
 name graph nodes (``PlayerController``, ``Player``, ``Inspector``, ``speed``)
 and rank them against the graph's Script / GameObject / Prefab / Scene names.
 
-No LLM — this is cheap deterministic regex matching. Layer 3 may later feed
+No LLM -- this is cheap deterministic regex matching. Layer 3 may later feed
 back signals to nudge the ranking, but the skeleton stays rule-based.
 """
 
@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from unitygraph.build.graph import Graph, Node
 
 # PascalCase or snake_case identifiers of length >= 3, plus anything inside
-# straight quotes. Very forgiving — we over-extract then filter against the
+# straight quotes. Very forgiving -- we over-extract then filter against the
 # graph on the retrieval side.
 _TOKEN_RE = re.compile(r"[A-Z][A-Za-z0-9]{2,}|[a-z_][a-z0-9_]{2,}|\"([^\"]+)\"|'([^']+)'")
 
@@ -38,7 +38,7 @@ class EntityExtractionResult:
 def extract_tokens(text: str) -> list[str]:
     """Return the candidate identifier tokens in ``text``.
 
-    Tokens come out as seen (preserving case) — retrieval lowercases when
+    Tokens come out as seen (preserving case) -- retrieval lowercases when
     needed. Duplicates are removed while preserving order.
     """
     seen: dict[str, None] = {}

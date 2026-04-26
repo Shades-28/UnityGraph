@@ -1,6 +1,6 @@
 """Profile ``build_project`` on a given project with per-phase timings.
 
-One-shot script — not part of the committed CLI. Usage::
+One-shot script -- not part of the committed CLI. Usage::
 
     python evals/perf/profile_build.py D:/PR/Unity/SomeProject
 """

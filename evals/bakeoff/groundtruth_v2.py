@@ -1,15 +1,16 @@
 """Generate ground truth for the 8 adversarial v2 questions on clash.io.
 
 Verifies each fact directly from source/scene files, NOT from UnityGraph
-itself — that would be circular.
+itself -- that would be circular.
 """
 from __future__ import annotations
 
 import json
+import os
 import re
 from pathlib import Path
 
-PROJECT = Path("D:/PR/Unity/clash.io")
+PROJECT = Path(os.environ.get("UNITYGRAPH_EVAL_ROOT", "D:/PR/Unity")) / "clash.io"
 
 
 def _walk_cs(root: Path):
@@ -64,7 +65,7 @@ def q9_enemybase_property() -> dict:
 
 
 def q10_generic_lists() -> dict:
-    """List<T> where T is a user-defined class — limit to game scripts."""
+    """List<T> where T is a user-defined class -- limit to game scripts."""
     user_class_names = set()
     for cs in _walk_cs(PROJECT):
         for m in re.finditer(r"\b(?:class|struct)\s+(\w+)", cs.read_text(encoding="utf-8", errors="replace")):
@@ -188,7 +189,7 @@ def q14_total_inspector_overrides() -> dict:
 
     Defined as: serialized fields in user game scripts whose scene/prefab
     value is set AND differs from the code default. We'll trust UnityGraph's
-    own count as the answer — but since this is an aggregate question,
+    own count as the answer -- but since this is an aggregate question,
     we hand-verify a sample.
 
     Actually for "ground truth" we'll just count matches in scenes/prefabs

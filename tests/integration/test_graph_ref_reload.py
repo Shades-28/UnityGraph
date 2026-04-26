@@ -2,7 +2,7 @@
 runs, prove a subsequent tool call sees the new data.
 
 This is the test that proves the I1.1 auto-rebuild UX works. Without it,
-the Stop-hook rebuild-the-graph trick is silent-fail territory — the hook
+the Stop-hook rebuild-the-graph trick is silent-fail territory -- the hook
 runs, the file updates, but the MCP server keeps serving stale data.
 """
 
@@ -71,7 +71,7 @@ def test_graph_ref_picks_up_rebuilt_graph(mutable_graph, tmp_path):
     assert "Player" in names_before
     reload_count_before = ref.reload_count
 
-    # Mutate graph.json on disk — add a synthetic GameObject node.
+    # Mutate graph.json on disk -- add a synthetic GameObject node.
     payload = json.loads(mutable_graph.read_text(encoding="utf-8"))
     payload["nodes"].append(
         {
@@ -152,7 +152,7 @@ def test_mcp_server_sees_updated_graph(mutable_graph):
     after = _spawn_and_query(mutable_graph)
     # Spawn the server anew each time in this test, so the post-rebuild
     # query is really a fresh-process test. The important assertion is that
-    # the marker is visible — if it is, the on-disk graph.json is being
+    # the marker is visible -- if it is, the on-disk graph.json is being
     # loaded correctly by the server (and by extension the GraphRef loader).
     match = after["matches"][0]
     detail = match.get("detail") or []

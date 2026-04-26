@@ -16,7 +16,7 @@ import yaml
 # Generated/library directories whose .meta files we must NOT index. Without
 # this, ``Library/PackageCache/com.unity.ugui/.../Image.cs.meta`` leaks into
 # the guid index and any scene reference to UnityEngine.UI.Image resolves to
-# a path under ``Library/`` — misleading (the user can't edit that file) and
+# a path under ``Library/`` -- misleading (the user can't edit that file) and
 # floods query results with 100+ attachments of Unity built-ins.
 #
 # Note: ``Packages/`` is deliberately NOT in the skip list. Unity uses that
@@ -62,7 +62,7 @@ def build_guid_index(
     """Walk ``project_root`` for ``.meta`` files and build a guid → asset-path map.
 
     The asset path returned is the file *without* the ``.meta`` suffix.
-    We do NOT stat the asset path — on large projects the per-file syscall
+    We do NOT stat the asset path -- on large projects the per-file syscall
     is a measurable hotspot, and a stale asset path is harmless: lookups
     against the index will return a path that doesn't resolve, which the
     caller already has to handle anyway.

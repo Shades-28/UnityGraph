@@ -1,6 +1,6 @@
 """Local HTTP + SSE server for the UnityGraph Observatory.
 
-No FastAPI, no websockets — just stdlib ``http.server`` plus an SSE endpoint
+No FastAPI, no websockets -- just stdlib ``http.server`` plus an SSE endpoint
 that polls ``graph.json`` mtime and streams updates to connected browsers.
 
 Endpoints:
@@ -33,7 +33,7 @@ ASSETS_DIR = Path(__file__).parent / "assets"
 
 
 # ---------------------------------------------------------------------------
-# Graph transformation — our graph.json shape -> react-force-graph-friendly
+# Graph transformation -- our graph.json shape -> react-force-graph-friendly
 # ---------------------------------------------------------------------------
 
 
@@ -55,7 +55,7 @@ def _is_user_script_data(data: dict[str, Any]) -> bool:
     """Mirrors mcp.queries._is_user_script for raw node-data dicts.
 
     Duplicated here (rather than imported) to keep viz independent of
-    the mcp module — the viz/ subtree is the public web surface and
+    the mcp module -- the viz/ subtree is the public web surface and
     must not pull in MCP server transport code.
     """
     if data.get("external") is True:
@@ -91,7 +91,7 @@ def _filter_user_scope(
     if not user_script_ids:
         return nodes, links, False
 
-    # 1-hop neighborhood — every node directly connected to a user script.
+    # 1-hop neighborhood -- every node directly connected to a user script.
     keep = set(user_script_ids)
     for link in links:
         src = link["source"]
@@ -235,7 +235,7 @@ def transform_graph(graph_path: Path) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# SSE broadcaster — one background thread watches the file, wakes clients.
+# SSE broadcaster -- one background thread watches the file, wakes clients.
 # ---------------------------------------------------------------------------
 
 

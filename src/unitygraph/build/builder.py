@@ -1,4 +1,4 @@
-"""Builder — orchestrates parsers, emits ``graph.json``.
+"""Builder -- orchestrates parsers, emits ``graph.json``.
 
 Algorithm:
 
@@ -19,7 +19,7 @@ Algorithm:
 5. Emit edges: ``attached_to``, ``co_exists_with``, ``depends_on``
    (GetComponent<T>), ``inherits``, ``subscribes_to``, ``loads_scene``.
 
-The builder never crashes on a malformed file — errors are collected into
+The builder never crashes on a malformed file -- errors are collected into
 ``BuildReport.warnings`` and the build continues.
 """
 
@@ -155,7 +155,7 @@ def build_project(
 
     # 4. Emit Script nodes + code-side edges with sites[].
     # Track edges by (from, to, type) so we can merge multiple call sites
-    # onto a single edge — Roslyn-style.
+    # onto a single edge -- Roslyn-style.
     edges_by_key: dict[tuple[str, str, str], Edge] = {}
 
     def _emit_or_merge_edge(
@@ -176,7 +176,7 @@ def build_project(
         else:
             for s in sites:
                 existing.add_site(s)
-            # Merge data conservatively — preserve existing keys.
+            # Merge data conservatively -- preserve existing keys.
             for k, v in data.items():
                 existing.data.setdefault(k, v)
 
@@ -214,7 +214,7 @@ def build_project(
                     )
                     _emit_or_merge_edge(node.id, base_id, "inherits", {}, [inherits_site])
 
-            # depends_on edges from GetComponent<T> — now site-rich.
+            # depends_on edges from GetComponent<T> -- now site-rich.
             gc_calls_by_target: dict[str, list[Site]] = {}
             for call in klass.get_component_calls:
                 target_id = _find_script_id_by_name(graph, call.target)
@@ -402,7 +402,7 @@ def build_project(
 def _discover(root: Path, pattern: str, *, skip_generated: bool) -> list[Path]:
     """Walk ``root`` for files matching ``pattern``, honoring the skip list.
 
-    Only the path *relative to* ``root`` is inspected — absolute segments like
+    Only the path *relative to* ``root`` is inspected -- absolute segments like
     ``C:\\Users\\...\\Temp\\...`` from a temp-dir test harness no longer
     collide with Unity's ``Temp/`` output folder.
     """
@@ -428,7 +428,7 @@ def _resolve_inherited_member_calls(
     a subclass that calls a method on an inherited field
     (``protected CharacterAnimator animator;`` declared on ``EnemyBase``,
     used by ``EnemyMelee.animator.SetAnimation(...)``), the parser
-    records the call as *unresolved* — receiver name without a type.
+    records the call as *unresolved* -- receiver name without a type.
 
     Once every script has been parsed, we have a global view of class
     declarations. Build a name → ClassInfo index, then for each class
@@ -436,7 +436,7 @@ def _resolve_inherited_member_calls(
     rewrite the unresolved CallSite's ``target`` to the field's declared
     type and promote it to ``field_method_calls``.
 
-    This is conservative — only field receivers are resolved (properties
+    This is conservative -- only field receivers are resolved (properties
     and locals are still missed by the parser entirely). Self-call
     chains, name shadowing, and partial classes are also out of scope.
     Cycle-safe via a ``seen`` set.
@@ -445,7 +445,7 @@ def _resolve_inherited_member_calls(
     for _path, classes in parsed_scripts:
         for klass in classes:
             # If the same class name appears in multiple files (rare but
-            # legal — e.g. partial classes split across files), prefer
+            # legal -- e.g. partial classes split across files), prefer
             # the one with the most fields. Field collision is the
             # only thing this lookup matters for.
             existing = classes_by_name.get(klass.name)
@@ -462,10 +462,10 @@ def _resolve_inherited_member_calls(
             parent = classes_by_name.get(current.base_class)
             if parent is None:
                 # Hit an external/unknown base (MonoBehaviour, third-party)
-                # — chain stops, receiver stays unresolved. Fine.
+                # -- chain stops, receiver stays unresolved. Fine.
                 return None
             # field_types includes private/protected fields, which is the
-            # whole point of this pass — protected/inherited members live
+            # whole point of this pass -- protected/inherited members live
             # outside the public-only ``fields`` list.
             if receiver in parent.field_types:
                 return parent.field_types[receiver]
@@ -548,7 +548,7 @@ def _ingest_scene(
         if comp.class_id == SCRIPT_CLASS_ID and comp.script_guid:
             script_entry = script_class_by_guid.get(comp.script_guid)
             if script_entry is None:
-                # Unknown script guid — maybe a third-party package script.
+                # Unknown script guid -- maybe a third-party package script.
                 # Record a placeholder Script node so Inspector values are still queryable.
                 ext_rel = str(guid_index.get(comp.script_guid) or f"<external:{comp.script_guid}>")
                 unknown_name = (

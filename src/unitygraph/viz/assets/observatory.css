@@ -16,7 +16,7 @@
   --glass:        rgba(17, 22, 42, 0.55);
   --glass-hot:    rgba(24, 30, 56, 0.7);
 
-  /* Node-type colors — tuned to feel like constellation stars */
+  /* Node-type colors -- tuned to feel like constellation stars */
   --type-Script:              #FF8C42;   /* ember */
   --type-GameObject:          #58B4FF;   /* cold cyan */
   --type-Component:           #C4C9D4;   /* mercury */
@@ -636,7 +636,7 @@ summary::-webkit-details-marker { display: none; }
 }
 
 /* -------------------------------------------------------------------------
-   Small screens — stay usable but prioritize the graph
+   Small screens -- stay usable but prioritize the graph
    ------------------------------------------------------------------------- */
 
 @media (max-width: 768px) {
@@ -648,7 +648,7 @@ summary::-webkit-details-marker { display: none; }
 }
 
 /* -------------------------------------------------------------------------
-   Evidence popover (v2.0) — edge-click panel listing source-level sites
+   Evidence popover (v2.0) -- edge-click panel listing source-level sites
    ------------------------------------------------------------------------- */
 
 .edge-detail ul.sites {

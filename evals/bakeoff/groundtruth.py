@@ -6,17 +6,19 @@ be verified directly from the source, it does not become a question.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 from unitygraph.build.graph import Graph
 from unitygraph.mcp import queries
 
-GRAPH = Graph.load(Path("D:/PR/Unity/clash.io/graph-out/graph.json"))
-PROJECT_ROOT = Path("D:/PR/Unity/clash.io")
+EVAL_ROOT = Path(os.environ.get("UNITYGRAPH_EVAL_ROOT", "D:/PR/Unity"))
+PROJECT_ROOT = EVAL_ROOT / "clash.io"
+GRAPH = Graph.load(PROJECT_ROOT / "graph-out" / "graph.json")
 
 
 def q1_enemy_controller_spawn() -> dict:
-    """Tier 1 — pure code: what does EnemyController.SpawnEnemy() do?"""
+    """Tier 1 -- pure code: what does EnemyController.SpawnEnemy() do?"""
     file = PROJECT_ROOT / "Assets/_Assets/Scripts/Enemy/EnemyController.cs"
     text = file.read_text(encoding="utf-8")
     # Locate SpawnEnemy method
@@ -44,7 +46,7 @@ def q1_enemy_controller_spawn() -> dict:
 
 
 def q2_enemybase_inheritance() -> dict:
-    """Tier 1 — class inheritance."""
+    """Tier 1 -- class inheritance."""
     file = PROJECT_ROOT / "Assets/_Assets/Scripts/Enemy/EnemyBase.cs"
     text = file.read_text(encoding="utf-8")
     return {
@@ -60,7 +62,7 @@ def q2_enemybase_inheritance() -> dict:
 
 
 def q3_who_calls_getcomponent_enemybase() -> dict:
-    """Tier 2 — cross-file structural."""
+    """Tier 2 -- cross-file structural."""
     # From the survey: EnemyController has GetComponent<EnemyBase>
     matches = []
     for e in GRAPH.edges:
@@ -90,7 +92,7 @@ def q3_who_calls_getcomponent_enemybase() -> dict:
 
 
 def q4_charactermbehaviour_calls_animator() -> dict:
-    """Tier 2 — method calls between classes."""
+    """Tier 2 -- method calls between classes."""
     sites = []
     for e in GRAPH.edges:
         if e.type != "depends_on":
@@ -116,9 +118,9 @@ def q4_charactermbehaviour_calls_animator() -> dict:
 
 
 def q5_inspector_override_enemycontroller() -> dict:
-    """Tier 3 — scene-code gap. EnemyController has 3 scalar overrides
+    """Tier 3 -- scene-code gap. EnemyController has 3 scalar overrides
     on its scene attachment: spawnRadius (10 vs code 12), despawnRadius
-    (12 vs 20), drawDebugRadius (1/true — same value, different format)."""
+    (12 vs 20), drawDebugRadius (1/true -- same value, different format)."""
     result = queries.inspector_overrides_for(GRAPH, "EnemyController")
     scalar_overrides = []
     for att in result.get("attachments", []):
@@ -151,7 +153,7 @@ def q5_inspector_override_enemycontroller() -> dict:
 
 
 def q6_unityevent_rateus() -> dict:
-    """Tier 3 — UnityEvent wiring (scene-only)."""
+    """Tier 3 -- UnityEvent wiring (scene-only)."""
     result = queries.event_listeners(GRAPH, "RateUsScript")
     listeners = []
     for lst in result.get("listeners", []):
@@ -175,7 +177,7 @@ def q6_unityevent_rateus() -> dict:
 
 
 def q7_missing_scripts() -> dict:
-    """Tier 3 — would never be visible to grep."""
+    """Tier 3 -- would never be visible to grep."""
     result = queries.find_missing_scripts(GRAPH, min_attachments=10)
     high_impact = [
         {
@@ -194,11 +196,11 @@ def q7_missing_scripts() -> dict:
 
 
 def q8_refactor_impact() -> dict:
-    """Tier 4 — synthesis: rename CharacterAnimator method.
+    """Tier 4 -- synthesis: rename CharacterAnimator method.
 
     The "what breaks" answer needs:
     * code callers (CharacterBehaviour → CharacterAnimator method_call sites)
-    * UnityEvent listeners on CharacterAnimator (none in clash.io — that's a useful negative)
+    * UnityEvent listeners on CharacterAnimator (none in clash.io -- that's a useful negative)
     * inheritance (no subclass)
     """
     method = "SetAnimation"  # multiple call sites in CharacterBehaviour
@@ -275,7 +277,7 @@ def main() -> None:
     out.write_text(json.dumps(questions, indent=2, default=str), encoding="utf-8")
     print(f"Wrote {len(questions)} questions to {out}")
     for q in questions:
-        print(f"  [Tier {q['tier']}] {q['id']}: {q['question'][:80]}…")
+        print(f"  [Tier {q['tier']}] {q['id']}: {q['question'][:80]}...")
 
 
 if __name__ == "__main__":

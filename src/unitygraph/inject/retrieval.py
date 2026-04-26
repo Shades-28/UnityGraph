@@ -152,7 +152,7 @@ def _task_type(
     emphasis = TASK_TYPE_EDGE_EMPHASIS.get(task_type, set())
     seeds = _top_seeds(entity_result)
     if not seeds:
-        # No entities — degrade to full_neighborhood, keep strategy label.
+        # No entities -- degrade to full_neighborhood, keep strategy label.
         fallback = _full_neighborhood(graph, entity_result)
         fallback.strategy = f"task_type:{task_type}"
         return fallback

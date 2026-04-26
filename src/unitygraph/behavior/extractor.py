@@ -1,4 +1,4 @@
-"""Delta extractor — turns feedback events into pattern observations.
+"""Delta extractor -- turns feedback events into pattern observations.
 
 Given a feedback event (``correct`` or ``incorrect``) and the injection
 event it's about, figure out which patterns in the store this evidence
@@ -11,7 +11,7 @@ Approach (MVP):
   2. If yes and ``verdict == 'correct'``, the pattern gets positive
      evidence. If ``verdict == 'incorrect'``, it gets negative evidence.
 
-Refinement (future): also look at the ``block`` field — did the injection
+Refinement (future): also look at the ``block`` field -- did the injection
 already inject the ``missing_context_type`` the pattern calls out? If it
 did and Claude still got it wrong, the pattern is less load-bearing; if it
 didn't and Claude got it wrong, the pattern is load-bearing.

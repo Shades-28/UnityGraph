@@ -1,4 +1,4 @@
-"""v1.5.0 integration — scene-side edges carry sites with file-level lines."""
+"""v1.5.0 integration -- scene-side edges carry sites with file-level lines."""
 
 from __future__ import annotations
 

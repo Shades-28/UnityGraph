@@ -1,4 +1,4 @@
-"""Pattern matcher — bridges the pattern map to Layer 2 retrieval.
+"""Pattern matcher -- bridges the pattern map to Layer 2 retrieval.
 
 Given a task string and the graph, return the set of **active** patterns
 whose triggers fire, along with a merged ``AdaptationHint`` that tells

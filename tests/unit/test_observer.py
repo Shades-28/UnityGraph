@@ -60,7 +60,7 @@ def test_observer_fire_and_forget_never_raises(tmp_path, monkeypatch):
     """Even if the filesystem is hostile, observer must not raise."""
     monkeypatch.setenv("UNITYGRAPH_OBSERVE", "1")
 
-    # Passing a path that doesn't exist and can't be written — the function
+    # Passing a path that doesn't exist and can't be written -- the function
     # must swallow OSError and return silently.
     try:
         observer.record_feedback("/nonexistent-root-xyz", "s", "correct")

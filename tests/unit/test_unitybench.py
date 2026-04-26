@@ -1,4 +1,4 @@
-"""Unit tests for the UnityBench harness — task loading, conditions, scoring."""
+"""Unit tests for the UnityBench harness -- task loading, conditions, scoring."""
 
 from __future__ import annotations
 

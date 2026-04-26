@@ -2,16 +2,16 @@
 
 A ``.controller`` file is a single Unity YAML document collection containing:
 
-- ``AnimatorController`` (classID 91) — top-level, with ``m_AnimatorParameters``
+- ``AnimatorController`` (classID 91) -- top-level, with ``m_AnimatorParameters``
   and ``m_AnimatorLayers``. Each layer references a ``m_StateMachine`` by
   fileID.
-- ``AnimatorStateMachine`` (classID 1107) — has ``m_ChildStates``,
+- ``AnimatorStateMachine`` (classID 1107) -- has ``m_ChildStates``,
   ``m_AnyStateTransitions``, ``m_EntryTransitions``, ``m_DefaultState``.
-- ``AnimatorState`` (classID 1102) — has ``m_Name``, ``m_Motion``, and
+- ``AnimatorState`` (classID 1102) -- has ``m_Name``, ``m_Motion``, and
   ``m_Transitions``.
-- ``AnimatorStateTransition`` (classID 1101) — has ``m_DstState``,
+- ``AnimatorStateTransition`` (classID 1101) -- has ``m_DstState``,
   ``m_Conditions``, ``m_TransitionDuration``, ``m_CanTransitionToSelf``.
-- ``BlendTree`` (classID 206) — a motion type referenced by states; contains
+- ``BlendTree`` (classID 206) -- a motion type referenced by states; contains
   child motions keyed off an ``m_BlendParameter``.
 
 Parameter types:

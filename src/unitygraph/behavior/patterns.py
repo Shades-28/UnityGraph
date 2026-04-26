@@ -1,4 +1,4 @@
-"""Layer 3 failure pattern map — SQLite-backed, append-only, decay-aware.
+"""Layer 3 failure pattern map -- SQLite-backed, append-only, decay-aware.
 
 Schema matches spec §3.4. Stored at
 ``<project_root>/.unitygraph/patterns.db`` alongside the session logs.

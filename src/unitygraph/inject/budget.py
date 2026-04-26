@@ -1,6 +1,6 @@
 """Token-count + budget enforcement for injected context blocks.
 
-Uses ``tiktoken`` with OpenAI's ``cl100k_base`` encoding — that's a decent
+Uses ``tiktoken`` with OpenAI's ``cl100k_base`` encoding -- that's a decent
 proxy for Claude's own tokenizer when we only need *approximate* counts to
 stay under a budget. The only guarantee the spec §2.7 requires is that the
 injected context stays under ``--budget`` (default 1500 tokens).

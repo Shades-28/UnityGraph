@@ -1,4 +1,4 @@
-"""Tests for v1.4.0 location-aware C# parsing — CallSite + line numbers."""
+"""Tests for v1.4.0 location-aware C# parsing -- CallSite + line numbers."""
 
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ def test_class_span_recorded(player_controller):
 def test_field_lines_recorded(player_controller):
     pc = player_controller.classes[0]
     by_name = {f.name: f for f in pc.fields}
-    # _speed is the first SerializeField — should be early in the file.
+    # _speed is the first SerializeField -- should be early in the file.
     assert by_name["_speed"].line >= 12  # depends on fixture layout
     assert by_name["_speed"].col > 0
 
@@ -75,7 +75,7 @@ def test_field_types_includes_private_fields(player_controller):
 def test_health_system_addlistener_call_resolves(player_controller):
     """PlayerController.Start does _health.OnDamaged.AddListener(...).
     The current parser only resolves one level of member access, so it
-    won't catch this nested call — document this behavior explicitly."""
+    won't catch this nested call -- document this behavior explicitly."""
     pc = player_controller.classes[0]
     # Current behavior: _health.OnDamaged.AddListener is *not* one of
     # `field.Method()`. The receiver `_health.OnDamaged` is a

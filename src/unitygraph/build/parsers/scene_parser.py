@@ -1,18 +1,18 @@
 """Scene/prefab parser.
 
 A Unity ``.unity`` or ``.prefab`` file is a collection of ``---``-separated
-documents (``UnityDoc`` — see ``unity_yaml.py``). We care about three kinds:
+documents (``UnityDoc`` -- see ``unity_yaml.py``). We care about three kinds:
 
-1. ``GameObject`` (classID 1) — has a name, tag, layer, active flag, and a
+1. ``GameObject`` (classID 1) -- has a name, tag, layer, active flag, and a
    ``m_Component`` list referencing fileIDs on the same document.
-2. Any classID whose body has ``m_GameObject: {fileID: N}`` — a component
+2. Any classID whose body has ``m_GameObject: {fileID: N}`` -- a component
    attached to GameObject ``N``. This covers built-in components (``Transform``,
    ``Rigidbody``, ``BoxCollider``, ...) and ``MonoBehaviour`` scripts.
-3. ``MonoBehaviour`` (classID 114) specifically — its ``m_Script: {guid: X}``
+3. ``MonoBehaviour`` (classID 114) specifically -- its ``m_Script: {guid: X}``
    tells us which user script class this component represents.
 
 Prefab variants (``PrefabInstance``, classID 1001) produce ``m_Modifications``
-override entries — we record the raw list for I3 to consume later.
+override entries -- we record the raw list for I3 to consume later.
 """
 
 from __future__ import annotations
@@ -227,7 +227,7 @@ def _ingest_component(scene: ParsedScene, doc: UnityDoc) -> None:
             }
         }
         comp.inspector_values = inspector
-        # Per-field line lookup — only for keys we actually emit edges from.
+        # Per-field line lookup -- only for keys we actually emit edges from.
         for k in inspector:
             line = doc.find_key_line(k)
             if line:
@@ -305,7 +305,7 @@ def _extract_event_connections(
 
     The ``line`` we attach to each EventConnection is the line of the
     *top-level MonoBehaviour field* that holds the UnityEvent (e.g.
-    ``m_OnClick``). This is the useful click-through target — a user
+    ``m_OnClick``). This is the useful click-through target -- a user
     clicking the edge wants to land on the field, not on a nested
     ``m_PersistentCalls`` mapping buried several levels deep.
     """

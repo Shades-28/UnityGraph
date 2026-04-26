@@ -38,7 +38,7 @@ def test_headline_inspector_override_discoverable_via_mcp():
     assert match["code_defaults"]["_speed"] == "5.0f"
     override_fields = {o["field"] for o in match["overrides"]}
     assert "_speed" in override_fields, (
-        "the `_speed` Inspector override MUST be flagged — this is the evidence "
+        "the `_speed` Inspector override MUST be flagged -- this is the evidence "
         "Claude uses to avoid the baseline wrong-answer path."
     )
 

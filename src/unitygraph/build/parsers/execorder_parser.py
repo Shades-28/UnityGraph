@@ -1,4 +1,4 @@
-"""Parser for ``ProjectSettings/MonoManager.asset`` — script execution order.
+"""Parser for ``ProjectSettings/MonoManager.asset`` -- script execution order.
 
 MonoManager stores a list of ``m_DefaultExecutionOrder`` entries, each with a
 script guid and a numeric order value. Negative values run earlier, positive

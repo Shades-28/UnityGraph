@@ -1,222 +1,232 @@
 # UnityGraph
 
-**Claude Code for Unity, without the scene-context gap.**
+**Make Unity projects queryable for any AI coding agent.**
 
-Claude Code can read your C# source, but it can't open your Unity scene.
-It doesn't know what components are on the `Player` GameObject, what
-Inspector value you set for `_speed`, or which button fires
-`OnAttackPressed`. All of that lives in Unity's YAML — invisible to
-source-only context. UnityGraph fixes it.
+Your AI agent can read your `.cs` files. It cannot open your Unity scene.
+It doesn't know that `_speed` is `7.0` on the `Player` GameObject in the
+scene (the code says `5.0f`). It doesn't know the UI Button fires
+`OnAttackPressed`. It doesn't know your prefab variant overrides
+`maxHealth = 150`. All of that lives in Unity's YAML -- invisible to
+source-only context.
 
-Point UnityGraph at your Unity project, run two commands, and every Claude
-Code session in that folder gets:
+UnityGraph parses scenes, prefabs, scripts, animators, and shadergraphs
+into a single graph, exposes it via MCP (Model Context Protocol), and
+lets your agent query it like any other tool. **The graph carries source
+evidence**: every code-derived edge knows the file, line, snippet, and
+method it came from.
 
-- A **knowledge graph** of scenes, prefabs, scripts, Animators, and
-  ShaderGraphs, with Inspector values attached where they matter.
-- An **MCP server** exposing 10 query tools Claude invokes on demand.
-- An **injection engine** that, given a task, selects the relevant
-  subgraph and emits a token-budgeted UNITYGRAPH CONTEXT block.
-- A **behavior model** that learns which failure patterns Claude
-  actually hits on your project and adapts the retrieval accordingly.
-
-No Unity Editor required. Installs in seconds. All three layers run
-locally.
+Works with Claude Code, Cursor, Windsurf, Aider, any MCP-aware editor.
+No Editor required. No LLM inside UnityGraph. Local-only.
 
 ---
 
-## Install
+## Quick start (90 seconds)
 
 ```bash
-pip install "unitygraph[full]"   # includes Layer 2 (inject) + Layer 3 (behavior)
+# 1. Install (Python 3.11+ required)
+pip install unitygraph
+
+# 2. Initialize your Unity project
 cd /path/to/your/unity/project
-unitygraph init .                # scaffolds CLAUDE.md, .mcp.json, .claude/skills/unity-aware/
-unitygraph build .               # parses Assets/ -> graph-out/graph.json
+unitygraph init .
+
+# 3. Build the graph
+unitygraph build .
+
+# Done. Open your editor -- the MCP server is auto-detected.
 ```
 
-Next Claude Code session in this folder picks up the MCP server
-automatically.
+**Don't have a Unity project to test on?** Try the bundled demo:
 
-**Minimal install (Layer 1 only):** `pip install unitygraph` gives you the
-graph + MCP server without the inject/behavior extras.
+```bash
+unitygraph init --demo my-demo-project
+cd my-demo-project
+unitygraph build .
+unitygraph viz graph-out/graph.json   # opens at http://127.0.0.1:7842
+```
+
+The Observatory loads the demo's force-directed graph in your browser.
+**Click any orange edge** to see the source-level evidence popover --
+file:line:snippet for every relationship.
 
 ---
 
-## Update
+## Why it exists
 
-When a newer UnityGraph is released, or you've pulled a newer version of the
-editable install, refresh your projects with one command:
+Claude Code (or Cursor, etc.) makes a refactoring decision based on the
+code it can read. On a real Unity project, that's wrong roughly as often
+as scene values diverge from code defaults -- which is **a lot**:
+
+| Project size       | Scripts | Inspector overrides | UnityEvent wirings | Missing-script refs |
+|---|---:|---:|---:|---:|
+| Small (a tutorial) | ~50     | ~10                 | 2                  | 0                   |
+| Medium (typical)   | ~300    | ~700                | 135                | 15                  |
+| Large (production) | 1,500+  | **15,000+**         | 470+               | 25+                 |
+
+Every one of those facts is invisible to a code-only reader. UnityGraph
+extracts them, attaches each one to a file:line, and serves them to your
+agent in milliseconds.
+
+---
+
+## What's in the graph
+
+Build a project and you get a `graph-out/graph.json` with:
+
+- **Nodes**: Script, GameObject, Component, Scene, Prefab, AnimatorController,
+  AnimState, ShaderGraph
+- **Edges**: `attached_to`, `co_exists_with`, `depends_on`, `inherits`,
+  `subscribes_to`, `overrides`, `is_variant_of`, `transitions_to`,
+  `loads_scene`, and more
+- **Sites**: every code-derived edge carries an array of evidence sites
+  with `file`, `line`, `col`, `snippet`, `kind` (`get_component`,
+  `method_call`, `find_object`, `inherits`, `subscribes_to`,
+  `attached_to`, `prefab_override`, etc.) -- Roslyn-style: one logical
+  edge, many evidence locations.
+
+The schema is backwards-compat: v1.x graphs load fine in 2.x readers
+(empty `sites: []` per edge).
+
+---
+
+## Available MCP tools
+
+After `unitygraph init`, your editor sees these tools (all local, all
+sub-50ms):
+
+**Direct lookups:**
+- `get_components(gameobject)` -- every component on a GameObject across all scopes
+- `get_inspector_values(component, gameobject)` -- Inspector values + flagged overrides vs. code defaults
+- `get_event_connections(gameobject)` -- UnityEvent listeners targeting this object
+- `get_scene_graph(scene)` -- full GameObject list for a scene
+- `get_prefab_chain(prefab)` -- variant inheritance chain with override entries
+
+**Refactor planning:**
+- `who_uses(script)` -- every inbound reference: attachments, GetComponent / method callers, subclasses, UnityEvent listeners. With evidence sites.
+- `impact_of(script)` -- outbound blast radius, multi-hop
+- `find_singletons(min_attachments)` -- user-owned scripts attached everywhere (defaults filter out Unity built-ins / third-party packs)
+- `inspector_overrides_for(script)` -- per-attachment Inspector vs code-default diff
+- `field_wiring(script, field)` -- every UnityEvent listener bound to a serialized field
+- `event_listeners(script)` -- all callbacks landing on a script's methods
+- `find_missing_scripts()` -- broken script references (the silent killer in big Unity projects)
+
+**Graph navigation:**
+- `find_script_usages(script)`
+- `get_neighbors(node, hops)`
+- `shortest_path(from, to)`
+- `query_graph(text)` -- keyword search
+
+---
+
+## Has it been tested?
+
+Yes. The repo includes a runnable bake-off harness in `evals/bakeoff/`
+comparing baseline file tools (Read/Glob/Grep) to UnityGraph on the
+same questions, across three real projects of increasing size. Drive
+it with `python evals/bakeoff/focused_run.py` after pointing
+`UNITYGRAPH_EVAL_ROOT` at your local Unity-project corpus.
+
+Headline: on a small project, both approaches mostly tie. On a large
+project (1,500+ scripts), **UnityGraph wins 5/7 questions decisively**
+because baseline runs into the cost wall -- e.g., 6,660 Inspector
+overrides on a single script across 1,110 attachments isn't something
+a developer can grep their way through in conversation.
+
+UnityGraph also **honestly admits its limits**: method bodies aren't
+stored (it points you at the file:line), return types aren't tracked
+(`async Task` enumeration falls back to grep), string-based dispatch
+(`SendMessage`, `Invoke`) isn't typed and can't be tracked. An agent
+combining UnityGraph queries + file tools is strictly better than either
+alone.
+
+---
+
+## Observatory (visualization)
 
 ```bash
+unitygraph viz path/to/your/graph.json
+```
+
+Opens an interactive force-directed graph at `http://127.0.0.1:7842`.
+Defaults to the user-script subgraph; toggle "full graph" if you want
+everything. Click any edge to see its evidence sites.
+
+---
+
+## Update path
+
+When a newer UnityGraph ships:
+
+```bash
+# Update the package
+pip install -U unitygraph
+
+# In each Unity project that uses it
 cd /path/to/your/unity/project
 unitygraph update .
 ```
 
-This:
+This refreshes the MCP config, the `.claude/skills/` definitions, and
+rebuilds the graph (incremental -- uses the parse cache).
 
-- Syncs every template file (`CLAUDE.md`, `.mcp.json`, `.claude/settings.json`,
-  `.claude/skills/unity-aware/SKILL.md`) to the installed version.
-- Preserves files you've hand-edited — anything with a `TODO` / `# custom`
-  marker is left alone and flagged as `custom`.
-- Rebuilds the graph via `build . --update` (incremental; reuses the parse
-  cache).
-
-Useful flags:
-
-```bash
-unitygraph update . --check           # preview changes without writing
-unitygraph update . --templates-only  # refresh templates, skip graph rebuild
-unitygraph update . --graph-only      # rebuild graph, skip template sync
-```
-
-To update the `unitygraph` package itself:
-
-```bash
-pip install -U "unitygraph[full]"     # published PyPI version
-# or, for the editable local install:
-cd /path/to/UnityGraph
-git pull
-pip install -e ".[full]"              # re-installs if dependencies changed
-```
-
-Then in every Unity project that uses it: `unitygraph update .`
+The cache key includes a `PARSER_VERSION` int that bumps on every
+incompatible parser change, so old cached entries rebuild cleanly on
+upgrade. No manual cache invalidation needed.
 
 ---
 
-## The three layers
+## Architecture
 
-| Layer | Role | Ships as |
-|---|---|---|
-| **L1 — Knowledge Graph** | Parses `.cs`/`.unity`/`.prefab`/`.controller`/`.shadergraph` into a single `graph.json`. 9 MCP query tools (`get_components`, `get_inspector_values`, `get_event_connections`, `get_prefab_chain`, …). | MIT open source |
-| **L2 — Injection Engine** | Picks task-relevant subgraph + formats it as a 1,500-token context block. Entity-hop / task-type / full-neighborhood strategies. 10th MCP tool: `inject_context`. | Commercial license |
-| **L3 — Behavior Model** | Observes every inject call, records feedback, learns which failure patterns fire on this project, adapts Layer 2 retrieval to close the gap. | Commercial premium |
+UnityGraph is **middleware**. It does not chat. It does not call an LLM.
+It does one thing -- turn Unity projects into a queryable graph that any
+MCP-aware agent can use.
 
-See [`UnityGraph_Project_Spec.md`](UnityGraph_Project_Spec.md) for the full
-specification and [`UnityGraph_Development_Plan.md`](UnityGraph_Development_Plan.md)
-for the iteration-by-iteration build history.
+- `src/unitygraph/build/` -- parsers (C#, Unity YAML, animator,
+  shadergraph) + the builder that emits `graph.json`
+- `src/unitygraph/mcp/` -- query library + stdio MCP server
+- `src/unitygraph/viz/` -- local web Observatory
+- `src/unitygraph/inject/` -- task-aware context-block formatter (Layer 2)
+- `src/unitygraph/behavior/` -- failure-pattern observation loop (Layer 3)
 
----
-
-## Observatory — live reactive visualization
-
-```bash
-unitygraph viz .
-```
-
-Opens your browser to a dark-themed, force-directed "galaxy" view of the
-project graph. Every time the graph rebuilds (Stop hook, manual `build
---update`, anything else), the page animates the new nodes in without a
-refresh — search, filter by node type, click for a detail card showing
-Inspector values, script fields, prefab chains, etc.
-
-Type-colored constellations: Scripts (ember), GameObjects (cold cyan),
-Components (mercury), Scenes (plum), Prefabs (sea-foam),
-AnimatorControllers (rose gold), AnimStates (lilac), ShaderGraphs (coral).
-
-## CLI reference
-
-```
-unitygraph build <path> [-o OUT] [--update] [-v]
-unitygraph serve <graph.json>                     # MCP stdio server
-unitygraph viz   [graph.json] [--project DIR] [--port N] [--no-browser]
-unitygraph init  [path] [--force] [--no-skill]    # scaffold Claude integration
-unitygraph update [path] [--check] [--templates-only] [--graph-only]
-unitygraph inject "<task>" --graph graph.json     # dump a UNITYGRAPH CONTEXT block
-unitygraph feedback correct|incorrect [--session ID] [--note TXT]
-unitygraph patterns list|show|promote|stats|replay
-```
+Layers 2 and 3 are optional (`pip install "unitygraph[full]"`).
 
 ---
 
-## Example: the headline bug
+## Limits, by design
 
-In a Unity project:
+- **No method bodies.** UnityGraph stores call sites, not source code.
+  For "what does this method do?" point your agent at the file:line.
+- **No return types.** Methods record name + line + lifecycle, not
+  `async Task` / `Task<T>`.
+- **No string-based dispatch.** `SendMessage("Foo")` is invisible to the
+  graph because the target is a string literal at runtime, not a typed
+  call.
+- **Properties are partially tracked.** Field receivers resolve through
+  inheritance; property getters that look like fields are best-effort.
+- **Scenes that don't have scripts at parse time** show their guids as
+  external placeholders. `find_missing_scripts` surfaces these -- useful
+  for triaging legacy projects.
 
-```csharp
-[SerializeField] private float _speed = 5.0f;   // code default
-
-private void HandleDamaged(int amount) {
-    _speedMultiplier = Mathf.Max(0.1f, 1.0f - (amount / 5.0f));  // wrong!
-}
-```
-
-The Inspector on the `Player` GameObject sets `_speed = 7.0` — the
-hardcoded `5.0f` in `HandleDamaged` is a baseline-blind mistake. Without
-scene data, Claude reads the code default, concludes the math is fine, and
-preserves the bug.
-
-With UnityGraph, Claude calls `get_inspector_values("PlayerController",
-"Player")`, sees `_speed = 7.0 (code default: 5.0f)`, and produces the
-right fix:
-
-```diff
-- _speedMultiplier = Mathf.Max(0.1f, 1.0f - (amount / 5.0f));
-+ _speedMultiplier = Mathf.Max(0.1f, 1.0f - (amount / _speed));
-```
-
-This is the I1 headline test; transcript checked in at
-[`evals/i1_headline/`](evals/i1_headline/).
+These are documented as scope, not as bugs.
 
 ---
 
-## Benchmark
+## Contributing
 
-**UnityBench** measures the scene-context gap empirically. 19 hand-authored
-tasks × 3 conditions × 5 metrics:
+Bug reports and PRs welcome. The repo includes:
 
-| Condition | What Claude sees |
-|---|---|
-| `baseline` | task text + source file |
-| `manual_visual` | + human-authored scene description |
-| `unitygraph` | + Layer 2 context block |
-| `unitygraph_adaptive` | + Layer 3 pattern-matched adaptation |
+- 184+ unit + integration tests (`pytest`)
+- Cross-project validation tests (`tests/integration/test_external_projects.py`)
+  that point at a corpus of real Unity projects via
+  `UNITYGRAPH_EVAL_ROOT` env var
+- A reproducible bake-off harness in `evals/bakeoff/`
 
-```bash
-export ANTHROPIC_API_KEY=sk-...
-python -m evals.unitybench.runner
-python -m evals.unitybench.report
-```
-
-Scope-scale note: paper-grade version is 120 tasks + Unity Test Runner
-integration. The MVP harness is runnable today.
-
----
-
-## Research
-
-Three papers fall out of the three layers. See `papers/` for
-supplementary-material stubs:
-
-- **L1** — *What minimal graph schema captures Unity-specific semantics?*
-  Schema comparison across 10+ projects. → MSR / FSE
-- **L2** — *Automated graph injection closes the scene-code gap.*
-  UnityBench + 3 conditions. → ASE / ICSE
-- **L3** — *External behavioral model of LLM domain priors outperforms
-  static injection.* → ICSE / NeurIPS
-
----
-
-## Status
-
-- L1 v0.1.0 — complete. 9 MCP tools, 5 parser types, 3 real Unity projects
-  validated (Indian-Bike-Gangster-3D, clash.io, Graudation-Saga at 72k nodes).
-- L2 v0.2.0 — complete. 3 strategies, token budget, 10th MCP tool, skill
-  manifest. Real-API benchmark awaits `ANTHROPIC_API_KEY`.
-- L3 v0.4.0 — complete. Observation loop, 6-pre-seed pattern map,
-  adaptive injection matcher. Pattern auto-promotion gate validated end-to-end.
-- v1.0.0 — this release. Bundle install, unified CLI, papers scaffold.
-
-96 tests pass, ruff + mypy strict clean, 3 real Unity projects survived.
+Style: `ruff check`, `mypy --strict`. CI in `scripts/ci.sh` /
+`scripts/ci.ps1`.
 
 ---
 
 ## License
 
-- **Layer 1** (parsers, graph model, MCP server, 9 tools) — **MIT**.
-- **Layer 2** (inject engine, skill, `inject_context` tool) — commercial
-  license (details in `LICENSE-COMMERCIAL.md` once published).
-- **Layer 3** (observation, pattern map, adaptive matcher) — premium
-  commercial.
-- Bundle license covers all three + UnityBench dataset + commercial use
-  rights.
-
-Contact RinvalAI for commercial licensing terms.
+[MIT](LICENSE) -- use it, modify it, ship it. Just keep the copyright
+notice. Authored by Aryan Reniwal (shades).

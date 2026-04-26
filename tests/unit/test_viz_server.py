@@ -80,7 +80,7 @@ def test_watcher_notifies_subscribers_on_mtime_change(mini_graph):
         first = q.get(timeout=1.0)
         assert first == "graph"
 
-        # Pause, then touch the file — expect a second event.
+        # Pause, then touch the file -- expect a second event.
         time.sleep(0.15)
         mini_graph.write_text(mini_graph.read_text(encoding="utf-8") + "\n", encoding="utf-8")
         event = q.get(timeout=1.0)

@@ -13,7 +13,7 @@ what the graph cares about per spec §1.3:
 - **SubGraphNode** objects → subgraph guid references.
 - **MaterialSlot** objects tagged output-facing → "output ports".
 
-Full node connectivity is out of scope for I3 — we only need the schema
+Full node connectivity is out of scope for I3 -- we only need the schema
 surface that a task prompt might reference.
 """
 
@@ -113,7 +113,7 @@ def _ingest(result: ParsedShaderGraph, obj: dict[str, Any]) -> None:
         return
 
     # Output-facing slots on BlockNode / master stack become the "output ports"
-    # of the shader — what it writes into the render pipeline.
+    # of the shader -- what it writes into the render pipeline.
     if "BlockNode" in short:
         name = obj.get("m_DisplayName") or obj.get("m_Name")
         if isinstance(name, str) and name:

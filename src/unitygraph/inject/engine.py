@@ -4,7 +4,7 @@ Pipeline:
 
 1. Check the in-process ``InjectCache`` (keyed by task hash + graph identity).
 2. **Consult the Layer 3 pattern matcher** (when ``adaptive=True``): any
-   active pattern whose trigger fires contributes an ``AdaptationHint`` —
+   active pattern whose trigger fires contributes an ``AdaptationHint`` --
    extra hops, emphasized edge types, and human-readable notes appended
    to the block.
 3. Entity extraction + retrieval (``entities`` + ``retrieval``).
@@ -17,7 +17,7 @@ Pipeline:
 The cache is a single-process LRU (128 entries) shared across the CLI and
 MCP server. Pass ``use_cache=False`` for A/B tests where you need a fresh
 compute every call. Pass ``adaptive=False`` to bypass the pattern matcher
-(same thing — for A/B against the static L2 baseline).
+(same thing -- for A/B against the static L2 baseline).
 """
 
 from __future__ import annotations

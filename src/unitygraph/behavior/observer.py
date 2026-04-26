@@ -2,7 +2,7 @@
 
 The MCP server and CLI both route through ``unitygraph.inject.engine``.
 Rather than monkey-patching, the engine calls ``record_injection`` before
-returning — this module owns the "where does the log go" decision so the
+returning -- this module owns the "where does the log go" decision so the
 engine stays ignorant of filesystem concerns.
 
 Enable by setting ``UNITYGRAPH_OBSERVE=1`` (or any truthy value). The log

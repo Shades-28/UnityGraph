@@ -1,7 +1,7 @@
 """Measure per-tool response time against a pre-built graph.
 
 Budget per plan §4.2: ``<500ms median`` for MCP tool responses on the
-largest project. We measure the pure-Python tool layer here — the MCP
+largest project. We measure the pure-Python tool layer here -- the MCP
 transport adds negligible overhead on top.
 
 Usage::

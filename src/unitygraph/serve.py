@@ -1,4 +1,4 @@
-"""MCP server entry point — ``python -m unitygraph.serve <graph.json>``.
+"""MCP server entry point -- ``python -m unitygraph.serve <graph.json>``.
 
 Matches the ``.mcp.json`` launch command referenced in the project spec
 (``args: ["-m", "unitygraph.serve", "graph-out/graph.json"]``).

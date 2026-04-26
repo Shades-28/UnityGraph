@@ -1,4 +1,4 @@
-"""v2.1.0 — cross-project sampled validation that sites actually point
+"""v2.1.0 -- cross-project sampled validation that sites actually point
 at real lines with the expected content.
 
 Runs against a real Unity project (clash.io in D:/PR/Unity). Skipped when
@@ -10,7 +10,7 @@ For each SiteKind we emit, pulls up to N random samples and verifies:
 * for code sites, the snippet substring is actually present on that line
 * for scene YAML sites, the line has the expected marker shape
 
-This is the kind of check I should have run before declaring v2.0 "done" —
+This is the kind of check I should have run before declaring v2.0 "done" --
 MiniUnityProject doesn't exercise enough breadth to catch site drift.
 """
 
@@ -40,7 +40,7 @@ def _sample_sites_by_kind(graph, max_per_kind: int = 10):
     for edge in graph.edges:
         for site in edge.sites:
             by_kind.setdefault(site.kind, []).append(site)
-    # Deterministic sampling — seed so reruns reproduce.
+    # Deterministic sampling -- seed so reruns reproduce.
     rng = random.Random(42)
     sampled: dict[str, list] = {}
     for kind, sites in by_kind.items():
@@ -156,7 +156,7 @@ def test_subscribes_to_sites_point_at_serialized_field(graph):
         stripped = line.lstrip()
         if not ((line.startswith("  ") and stripped.endswith(":")) or ":" in stripped):
             bad.append(f"{site.file}:{site.line} | {line!r}")
-    # Small slop — UnityEvent fields can occasionally anchor elsewhere
+    # Small slop -- UnityEvent fields can occasionally anchor elsewhere
     # for unusual YAML layouts.
     assert len(bad) <= max(1, len(sites) // 5), (
         "subscribes_to sites not on field-like lines:\n" + "\n".join(bad[:5])

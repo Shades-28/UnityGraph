@@ -3,7 +3,7 @@
 The server holds a :class:`GraphRef` that auto-reloads ``graph.json`` when
 the file changes on disk. That means a Stop/PostToolUse hook that runs
 ``unitygraph build . --update`` during a Claude Code session takes effect
-on the *next* MCP tool call — no server restart required.
+on the *next* MCP tool call -- no server restart required.
 """
 
 from __future__ import annotations
@@ -39,7 +39,7 @@ def build_server(graph_path: Path) -> FastMCP:
     @server.tool(
         description=(
             "Return Inspector-set field values for a component on a GameObject. "
-            "For scripts, also returns code defaults and flags any overrides — "
+            "For scripts, also returns code defaults and flags any overrides -- "
             "critical for distinguishing Inspector-tuned values from code literals."
         )
     )
@@ -56,7 +56,7 @@ def build_server(graph_path: Path) -> FastMCP:
 
     @server.tool(
         description=(
-            "List UnityEvent connections for a GameObject — both outgoing (events this "
+            "List UnityEvent connections for a GameObject -- both outgoing (events this "
             "object fires) and incoming (callbacks listening on this object)."
         )
     )
@@ -92,7 +92,7 @@ def build_server(graph_path: Path) -> FastMCP:
 
     @server.tool(
         description=(
-            "Simple natural-language graph query — extracts entity tokens from "
+            "Simple natural-language graph query -- extracts entity tokens from "
             "the text, finds matching nodes, returns their 2-hop subgraph. "
             "For token-budgeted retrieval (Layer 2), use inject_context instead."
         )
@@ -137,7 +137,7 @@ def build_server(graph_path: Path) -> FastMCP:
     # ── v1.6.0 deterministic query library ──────────────────────────────
     @server.tool(
         description=(
-            "Every inbound reference to a script — attachments, GetComponent/"
+            "Every inbound reference to a script -- attachments, GetComponent/"
             "FindObjectOfType/method callers, subclasses, UnityEvent listeners. "
             "Each usage includes evidence sites (file:line)."
         )
@@ -147,7 +147,7 @@ def build_server(graph_path: Path) -> FastMCP:
 
     @server.tool(
         description=(
-            "Blast radius — every node reachable outbound from this script "
+            "Blast radius -- every node reachable outbound from this script "
             "within `hops`. Reports the first edge type that reached each "
             "target, so you can gauge what a refactor touches."
         )
@@ -158,7 +158,7 @@ def build_server(graph_path: Path) -> FastMCP:
     @server.tool(
         description=(
             "Scripts attached to `min_attachments` or more GameObjects across "
-            "the project. These are 'used everywhere' — renames and API "
+            "the project. These are 'used everywhere' -- renames and API "
             "changes have outsize blast radius. `user_only` (default true) "
             "drops Unity built-ins, third-party asset packs, and unresolved "
             "placeholders; set false to see everything."
@@ -175,7 +175,7 @@ def build_server(graph_path: Path) -> FastMCP:
         description=(
             "All Inspector-tuned fields for a script across every scene/prefab "
             "attachment. An override means the scene value differs from the "
-            "code-level default — the field where Claude Code is most often "
+            "code-level default -- the field where Claude Code is most often "
             "wrong by reading .cs alone."
         )
     )
@@ -195,7 +195,7 @@ def build_server(graph_path: Path) -> FastMCP:
     @server.tool(
         description=(
             "All UnityEvent callbacks that land on methods of a script. Run "
-            "before renaming a public method — UnityEvent strings bind by "
+            "before renaming a public method -- UnityEvent strings bind by "
             "name, not by reference."
         )
     )
@@ -204,7 +204,7 @@ def build_server(graph_path: Path) -> FastMCP:
 
     @server.tool(
         description=(
-            "Placeholder Script nodes — scene/prefab references to a "
+            "Placeholder Script nodes -- scene/prefab references to a "
             "script_guid that doesn't resolve to a .cs file in this project. "
             "Usually indicates a deleted script, a renamed class, or a "
             "stripped package. `min_attachments` (default 1) filters out "

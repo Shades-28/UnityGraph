@@ -1,8 +1,8 @@
-"""C# parser — tree-sitter based.
+"""C# parser -- tree-sitter based.
 
 Extracts per-file: namespace, class names, base class, interfaces, serialized +
 public fields, method names, MonoBehaviour lifecycle methods, ``GetComponent<T>``
-calls, and class inheritance. No semantic type resolution — structural parsing.
+calls, and class inheritance. No semantic type resolution -- structural parsing.
 
 Grammar reference: the tree-sitter-c-sharp AST uses ``name``/``body`` field
 accessors on namespace/class nodes, an unnamed ``base_list`` child on classes,
@@ -101,18 +101,18 @@ class ClassInfo:
     # v1.2+: rich call-site records.
     get_component_calls: list[CallSite] = field(default_factory=list)
     find_object_calls: list[CallSite] = field(default_factory=list)
-    # Method calls on stored fields (`_rigidbody.AddForce(...)`) — each
+    # Method calls on stored fields (`_rigidbody.AddForce(...)`) -- each
     # entry's ``target`` is the receiver identifier, which the builder
     # resolves to the field's declared type.
     field_method_calls: list[CallSite] = field(default_factory=list)
     # v2.1.2: member-access calls whose receiver is NOT a field of this
-    # class — usually inherited from a parent class. The receiver name is
+    # class -- usually inherited from a parent class. The receiver name is
     # captured here; the builder resolves it across the inheritance chain
     # and promotes the matched ones into ``field_method_calls``. The
     # CallSite's ``target`` field starts as the unresolved receiver name
     # and is replaced with the actual type once the chain walk finds it.
     unresolved_member_calls: list[CallSite] = field(default_factory=list)
-    # v2.1.2: every field declared on this class with its type — including
+    # v2.1.2: every field declared on this class with its type -- including
     # non-serialized (private/protected) fields, which never make it into
     # ``fields``. Used by the builder's inheritance-chain walk to resolve
     # method calls on inherited fields.
@@ -196,7 +196,7 @@ def _snippet(node: TSNode, source: bytes, max_len: int = 140) -> str:
     # Collapse multi-line calls into one readable line.
     text = " ".join(text.split())
     if len(text) > max_len:
-        text = text[: max_len - 1] + "…"
+        text = text[: max_len - 1] + "..."
     return text
 
 
@@ -282,7 +282,7 @@ class _Visitor:
     def _walk_members(self, body: TSNode, info: ClassInfo) -> None:
         for child in body.children:
             if child.type == "class_declaration":
-                # Nested class — visit separately (adds another ClassInfo).
+                # Nested class -- visit separately (adds another ClassInfo).
                 self._visit_class(child)
             elif child.type == "field_declaration":
                 self._parse_field(child, info)
@@ -317,7 +317,7 @@ class _Visitor:
             is_serialized = is_public or has_serialize_attr
             f_line, f_col, _el, _ec = _line_col(name_n)
             # Always record the field's declared type so the visitor can
-            # resolve `_x.Method()` later — even for non-serialized fields.
+            # resolve `_x.Method()` later -- even for non-serialized fields.
             self._field_types[field_name] = type_name
             # v2.1.2: also record on the class itself, so inherited-field
             # resolution can walk the chain across files.
@@ -448,7 +448,7 @@ class _Visitor:
     def _extract_member_call(self, fn_node: TSNode) -> tuple[str | None, str | None]:
         """For ``receiver.Method(...)``, return (receiver, method) or (None, None).
 
-        Only unwraps one level of member access — ``this._x.Y()`` returns
+        Only unwraps one level of member access -- ``this._x.Y()`` returns
         (None, None) which is fine; the builder can only resolve simple
         field-scoped receivers anyway.
         """

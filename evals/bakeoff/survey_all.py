@@ -3,13 +3,14 @@
 * example inheritance chains (depth >= 2)
 * generic methods we can ask about
 * extension methods
-* properties (vs fields) — UnityGraph weak spot
+* properties (vs fields) -- UnityGraph weak spot
 * partial classes
 * async / Task methods
 * interface implementations
 """
 from __future__ import annotations
 
+import os
 import re
 from collections import defaultdict
 from pathlib import Path
@@ -17,10 +18,11 @@ from pathlib import Path
 from unitygraph.build.graph import Graph
 from unitygraph.mcp import queries
 
+EVAL_ROOT = Path(os.environ.get("UNITYGRAPH_EVAL_ROOT", "D:/PR/Unity"))
 PROJECTS = {
-    "clash.io": Path("D:/PR/Unity/clash.io"),
-    "Indian Bike": Path("D:/PR/Unity/Indian Bike"),
-    "Graudation-Saga": Path("D:/PR/Unity/Graudation-Saga"),
+    "clash.io": EVAL_ROOT / "clash.io",
+    "MidsizeProject": EVAL_ROOT / "MidsizeProject",
+    "LargeProject": EVAL_ROOT / "LargeProject",
 }
 
 
@@ -90,7 +92,7 @@ def survey(name: str, root: Path) -> None:
     for name, count in sorted(target_scripts, key=lambda x: -x[1])[:5]:
         print(f"   {name}: {count} scalar override(s)")
 
-    # UnityEvent landings — every script that's a UnityEvent target
+    # UnityEvent landings -- every script that's a UnityEvent target
     listeners_per_script = defaultdict(int)
     for n in user_scripts:
         result = queries.event_listeners(g, n.data["name"])

@@ -7,12 +7,14 @@
 This is a pen-and-paper analysis, not literally running 100s of greps.
 """
 import json
+import os
 from pathlib import Path
 
+EVAL_ROOT = Path(os.environ.get("UNITYGRAPH_EVAL_ROOT", "D:/PR/Unity"))
 PROJECTS = {
-    "clash.io": Path("D:/PR/Unity/clash.io"),
-    "Indian Bike": Path("D:/PR/Unity/Indian Bike"),
-    "Graudation-Saga": Path("D:/PR/Unity/Graudation-Saga"),
+    "clash.io": EVAL_ROOT / "clash.io",
+    "MidsizeProject": EVAL_ROOT / "MidsizeProject",
+    "LargeProject": EVAL_ROOT / "LargeProject",
 }
 
 
@@ -26,8 +28,8 @@ def cost(project: str) -> dict:
         },
         "Q6_unityevent_targets_count": {
             "feasible": True,
-            "calls": 50 if project == "Graudation-Saga" else 10,
-            "risk": "For each user script, find guid, grep YAML — 600+ scripts on Graudation-Saga is hours",
+            "calls": 50 if project == "LargeProject" else 10,
+            "risk": "For each user script, find guid, grep YAML -- 600+ scripts on LargeProject is hours",
         },
         "Q7_missing_scripts": {
             "feasible": False,
@@ -37,7 +39,7 @@ def cost(project: str) -> dict:
         "Q10_list_usertype": {
             "feasible": True,
             "calls": 5,
-            "risk": "Need to know all user class names first — extra grep pass",
+            "risk": "Need to know all user class names first -- extra grep pass",
         },
         "Q13_top_singleton_scopes": {
             "feasible": True,
@@ -52,7 +54,7 @@ def cost(project: str) -> dict:
         "Q16_string_dispatch": {
             "feasible": True,
             "calls": 1,
-            "risk": "Easy single grep — UnityGraph CAN'T answer this; baseline wins",
+            "risk": "Easy single grep -- UnityGraph CAN'T answer this; baseline wins",
         },
     }
 

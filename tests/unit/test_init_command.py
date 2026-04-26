@@ -82,6 +82,35 @@ def test_init_no_skill_skips_skill_directory(tmp_path):
 
     assert (project / "CLAUDE.md").exists()
     assert (project / ".mcp.json").exists()
-    # settings.json still written — the auto-rebuild hook is orthogonal to the skill.
+    # settings.json still written -- the auto-rebuild hook is orthogonal to the skill.
     assert (project / ".claude" / "settings.json").exists()
     assert not (project / ".claude" / "skills").exists()
+
+
+def test_init_demo_scaffolds_unity_project(tmp_path):
+    """v2.2: --demo creates a fresh Unity demo project at the path."""
+    project = tmp_path / "demo-project"
+    # Path must NOT exist beforehand.
+    runner = CliRunner()
+    result = runner.invoke(main, ["init", str(project), "--demo"])
+    assert result.exit_code == 0, result.output
+
+    # Demo Unity project files
+    assert (project / "Assets").is_dir()
+    assert (project / "ProjectSettings").is_dir()
+    # And UnityGraph templates installed inside it
+    assert (project / "CLAUDE.md").exists()
+    assert (project / ".mcp.json").exists()
+    assert (project / ".claude" / "settings.json").exists()
+
+
+def test_init_demo_refuses_to_overwrite_existing_directory(tmp_path):
+    """--demo must NOT clobber an existing non-empty directory."""
+    project = tmp_path / "existing"
+    project.mkdir()
+    (project / "important.txt").write_text("don't lose me", encoding="utf-8")
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["init", str(project), "--demo"])
+    assert result.exit_code != 0
+    assert (project / "important.txt").exists(), "must not have wiped existing contents"

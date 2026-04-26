@@ -1,4 +1,4 @@
-"""Unit tests for Layer 2 — entity extraction, retrieval, formatting, budget."""
+"""Unit tests for Layer 2 -- entity extraction, retrieval, formatting, budget."""
 
 from __future__ import annotations
 

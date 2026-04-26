@@ -2,8 +2,8 @@
 
 Subcommands:
 
-* ``unitygraph build <project_path> [--output DIR]``   — emit ``graph.json``
-* ``unitygraph serve <graph.json>``                     — run the MCP server
+* ``unitygraph build <project_path> [--output DIR]``   -- emit ``graph.json``
+* ``unitygraph serve <graph.json>``                     -- run the MCP server
 
 Further subcommands (``inject``, ``feedback``, ``patterns``) land in later
 iterations per ``UnityGraph_Development_Plan.md``.
@@ -21,7 +21,7 @@ from unitygraph.build.builder import build_project
 from unitygraph.build.cache import ParseCache
 
 
-@click.group(help="UnityGraph — autonomous Unity developer system for Claude Code.")
+@click.group(help="UnityGraph -- autonomous Unity developer system for Claude Code.")
 @click.version_option(__version__, prog_name="unitygraph")
 def main() -> None:
     pass
@@ -85,25 +85,71 @@ def build(project_path: str, output: str | None, update: bool, verbose: bool) ->
 @main.command(help="Serve a graph.json over MCP (stdio).")
 @click.argument("graph_path", type=click.Path(exists=True, dir_okay=False))
 def serve(graph_path: str) -> None:
-    # Import lazily — mcp pulls in anyio and starts an event loop.
+    # Import lazily -- mcp pulls in anyio and starts an event loop.
     from unitygraph.mcp.server import run_stdio_server
 
     run_stdio_server(Path(graph_path).resolve())
 
 
 @main.command(
-    help="Initialize UnityGraph in a Unity project — writes CLAUDE.md, .mcp.json, and the Claude skill."
+    help=(
+        "Initialize UnityGraph in a Unity project -- writes CLAUDE.md, "
+        ".mcp.json, and the Claude skill. With --demo, scaffolds a small "
+        "Unity demo project at the given path so you can see the tool work "
+        "without needing your own project."
+    )
 )
-@click.argument("project_path", type=click.Path(exists=True, file_okay=False), default=".")
+@click.argument(
+    "project_path", type=click.Path(file_okay=False), default="."
+)
 @click.option("--force", is_flag=True, help="Overwrite existing files.")
 @click.option(
     "--no-skill",
     is_flag=True,
     help="Skip writing .claude/skills/unity-aware (useful for minimal installs).",
 )
-def init(project_path: str, force: bool, no_skill: bool) -> None:
+@click.option(
+    "--demo",
+    is_flag=True,
+    help=(
+        "Create a fresh demo Unity project at PROJECT_PATH (the directory "
+        "must not already exist). Lets you try UnityGraph end-to-end without "
+        "needing your own project."
+    ),
+)
+def init(project_path: str, force: bool, no_skill: bool, demo: bool) -> None:
     project = Path(project_path).resolve()
     templates = Path(__file__).parent / "templates"
+
+    # --demo: scaffold the bundled MiniUnityProject before running init.
+    if demo:
+        demo_src = templates / "demo"
+        if not demo_src.exists():
+            click.echo(
+                f"[error] demo template missing at {demo_src}. "
+                "Reinstall the package or check pip install integrity.",
+                err=True,
+            )
+            raise click.Abort()
+        if project.exists() and any(project.iterdir()):
+            click.echo(
+                f"[error] {project} already exists and is not empty. "
+                "Pass a fresh path, or use plain `unitygraph init` on an "
+                "existing Unity project.",
+                err=True,
+            )
+            raise click.Abort()
+        import shutil
+
+        shutil.copytree(demo_src, project, dirs_exist_ok=False)
+        click.echo(f"scaffolded demo project at {project}")
+    elif not project.exists():
+        click.echo(
+            f"[error] {project} does not exist. Pass --demo to scaffold a "
+            "demo project, or pass an existing Unity project directory.",
+            err=True,
+        )
+        raise click.Abort()
 
     targets: list[tuple[Path, Path]] = [
         (templates / "CLAUDE.md", project / "CLAUDE.md"),
@@ -217,7 +263,7 @@ def update(
             is_user_edited = _looks_user_edited(target, rel)
             if is_user_edited and not check:
                 click.echo(
-                    f"  custom:        {rel}  (hand-edited — run `unitygraph init {project} --force` to overwrite)",
+                    f"  custom:        {rel}  (hand-edited -- run `unitygraph init {project} --force` to overwrite)",
                     err=True,
                 )
                 custom += 1
@@ -267,7 +313,7 @@ def _looks_user_edited(path: Path, rel: str) -> bool:
     current template, so we fall back to a size/length comparison: files
     larger than template + 20% or with "TODO"/"custom" markers are treated
     as edited."""
-    # Only apply to CLAUDE.md and the skill — .mcp.json and settings.json
+    # Only apply to CLAUDE.md and the skill -- .mcp.json and settings.json
     # are expected to be pure templates.
     if rel not in {"CLAUDE.md", ".claude/skills/unity-aware/SKILL.md"}:
         return False
@@ -323,37 +369,49 @@ def inject(
     )
 
 
-@main.command(help="Launch the Observatory — a live reactive visualization of the project graph.")
+@main.command(help="Launch the Observatory -- a live reactive visualization of the project graph.")
 @click.argument(
-    "graph_path",
-    type=click.Path(exists=True, dir_okay=False),
+    "target",
+    type=click.Path(exists=True),
     required=False,
 )
 @click.option(
     "--project",
     "project_path",
     type=click.Path(exists=True, file_okay=False),
-    default=".",
-    help="Project root (default: cwd). Ignored if GRAPH_PATH is given explicitly.",
+    default=None,
+    help="Project root. Same effect as passing the project dir as TARGET.",
 )
 @click.option("--port", type=int, default=7842, help="Preferred port (auto-bumps if busy).")
 @click.option("--host", default="127.0.0.1", help="Bind host (default localhost only).")
 @click.option("--no-browser", is_flag=True, help="Don't auto-open the browser.")
 def viz(
-    graph_path: str | None,
-    project_path: str,
+    target: str | None,
+    project_path: str | None,
     port: int,
     host: str,
     no_browser: bool,
 ) -> None:
+    """Launch the Observatory.
+
+    TARGET can be:
+    * a project directory (we look for ``graph-out/graph.json`` inside it)
+    * a graph.json file directly
+    * omitted (defaults to current directory's graph-out/graph.json)
+    """
     import webbrowser
 
     from unitygraph.viz.server import run_server, wait_until_ready
 
-    if graph_path is None:
-        resolved = Path(project_path).resolve() / "graph-out" / "graph.json"
+    # Resolve to an actual graph.json. Accept project dir, file, or default.
+    if target is None and project_path is None:
+        candidate = Path(".").resolve() / "graph-out" / "graph.json"
+    elif target is not None:
+        t = Path(target).resolve()
+        candidate = t / "graph-out" / "graph.json" if t.is_dir() else t
     else:
-        resolved = Path(graph_path).resolve()
+        candidate = Path(project_path).resolve() / "graph-out" / "graph.json"  # type: ignore[arg-type]
+    resolved = candidate
 
     if not resolved.exists():
         click.echo(
@@ -411,7 +469,7 @@ def feedback(verdict: str, project_path: str, session_id: str | None, note: str)
     project = Path(project_path).resolve()
     target = session_id or _latest_session_id(project)
     if not target:
-        click.echo("no session log found — run a Claude session first", err=True)
+        click.echo("no session log found -- run a Claude session first", err=True)
         sys.exit(2)
 
     observer.record_feedback(str(project), target, verdict, note=note)

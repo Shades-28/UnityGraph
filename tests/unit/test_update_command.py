@@ -1,4 +1,4 @@
-"""Tests for `unitygraph update` — template sync + graph rebuild."""
+"""Tests for `unitygraph update` -- template sync + graph rebuild."""
 
 from __future__ import annotations
 
@@ -109,5 +109,5 @@ def test_update_graph_only_skips_templates(tmp_path):
     assert result.exit_code == 0
     assert "templates:" not in result.output
     assert "rebuilt:" in result.output
-    # Template still the corrupted version — --graph-only didn't touch it.
+    # Template still the corrupted version -- --graph-only didn't touch it.
     assert mcp.read_text(encoding="utf-8") == '{"old": true}'

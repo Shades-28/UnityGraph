@@ -1,4 +1,4 @@
-"""I0 smoke tests — verify the package is importable and CLI wiring is sane."""
+"""I0 smoke tests -- verify the package is importable and CLI wiring is sane."""
 
 from __future__ import annotations
 

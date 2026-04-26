@@ -1,4 +1,4 @@
-"""v1.6.0 — deterministic query library."""
+"""v1.6.0 -- deterministic query library."""
 
 from __future__ import annotations
 
@@ -101,7 +101,7 @@ def test_field_wiring_scopes_by_field_name(graph):
 
 def test_find_missing_scripts_reports_external_placeholders(graph):
     # The fixture's UI_Button references a script guid we can't resolve
-    # (fe87c0e1...) — it should surface as an external placeholder with
+    # (fe87c0e1...) -- it should surface as an external placeholder with
     # the GameObjects it's attached to.
     result = queries.find_missing_scripts(graph)
     assert result["count"] >= 1
@@ -115,7 +115,7 @@ def test_impact_of_unknown_script(graph):
 
 
 def test_who_uses_inherited_by(graph):
-    # DamagedEvent inherits UnityEvent<int> — UnityEvent isn't a user
+    # DamagedEvent inherits UnityEvent<int> -- UnityEvent isn't a user
     # script so no inherits entry there. But the function must not fail.
     result = queries.who_uses(graph, "HealthSystem")
     assert "inherited_by" in result

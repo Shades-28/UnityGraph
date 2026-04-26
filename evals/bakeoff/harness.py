@@ -1,7 +1,7 @@
-"""Bake-off harness — runs the same questions through Claude twice.
+"""Bake-off harness -- runs the same questions through Claude twice.
 
-Run A: BASELINE — file tools only (read_file, glob_files, grep_files).
-Run B: WITH_UNITYGRAPH — same file tools + the v1.6 MCP query library.
+Run A: BASELINE -- file tools only (read_file, glob_files, grep_files).
+Run B: WITH_UNITYGRAPH -- same file tools + the v1.6 MCP query library.
 
 Same model, same temperature, same system prompt, same questions.
 Only the tool list differs.
@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import fnmatch
 import json
+import os
 import re
 import sys
 import time
@@ -28,7 +29,8 @@ from unitygraph.mcp import queries
 # Configuration
 # ---------------------------------------------------------------------------
 
-PROJECT_ROOT = Path("D:/PR/Unity/clash.io")
+EVAL_ROOT = Path(os.environ.get("UNITYGRAPH_EVAL_ROOT", "D:/PR/Unity"))
+PROJECT_ROOT = EVAL_ROOT / "clash.io"
 GRAPH_PATH = PROJECT_ROOT / "graph-out" / "graph.json"
 MODEL = "claude-haiku-4-5-20251001"
 MAX_TURNS = 12
@@ -37,14 +39,14 @@ SYSTEM_PROMPT = (
     "about the project at the specified root. Use the tools provided to "
     "investigate the codebase. When you are confident in your answer, "
     "respond with a final answer in your text. Do not invent file paths "
-    "or values — only state things you have verified through a tool call. "
+    "or values -- only state things you have verified through a tool call. "
     "If a question cannot be answered with your tools, say so explicitly "
     "rather than guessing.\n\n"
     f"Project root: {PROJECT_ROOT}"
 )
 
 # ---------------------------------------------------------------------------
-# Tool implementations — file primitives (both configurations)
+# Tool implementations -- file primitives (both configurations)
 # ---------------------------------------------------------------------------
 
 
@@ -121,7 +123,7 @@ def tool_grep_files(pattern: str, glob: str = "*.cs", max_results: int = 30) -> 
 
 
 # ---------------------------------------------------------------------------
-# UnityGraph tools — only present in run B
+# UnityGraph tools -- only present in run B
 # ---------------------------------------------------------------------------
 
 _GRAPH = None
@@ -238,7 +240,7 @@ UNITYGRAPH_TOOLS = [
     },
     {
         "name": "event_listeners",
-        "description": "All UnityEvent callbacks bound to methods of a script (scene-YAML wirings — invisible to source-only readers).",
+        "description": "All UnityEvent callbacks bound to methods of a script (scene-YAML wirings -- invisible to source-only readers).",
         "input_schema": {
             "type": "object",
             "properties": {"script_name": {"type": "string"}},
@@ -247,7 +249,7 @@ UNITYGRAPH_TOOLS = [
     },
     {
         "name": "find_missing_scripts",
-        "description": "Placeholder Script nodes — scene/prefab references to a script_guid that doesn't resolve.",
+        "description": "Placeholder Script nodes -- scene/prefab references to a script_guid that doesn't resolve.",
         "input_schema": {
             "type": "object",
             "properties": {"min_attachments": {"type": "integer", "default": 1}},

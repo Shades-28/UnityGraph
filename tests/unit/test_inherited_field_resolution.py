@@ -1,4 +1,4 @@
-"""v2.1.2 — inherited-field method-call resolution.
+"""v2.1.2 -- inherited-field method-call resolution.
 
 The C# parser sees one file at a time, so when a subclass calls a
 method on a field declared on its parent class, the parser can't
@@ -6,7 +6,7 @@ resolve the receiver type. The builder runs a second pass over all
 parsed classes that walks each one's inheritance chain and promotes
 matching unresolved calls into ``field_method_calls``.
 
-Bug history: the bake-off (evals/bakeoff/) caught this on Q8 — clash.io
+Bug history: the bake-off (evals/bakeoff/) caught this on Q8 -- clash.io
 has ``EnemyMelee : EnemyBase`` and EnemyMelee calls
 ``animator.SetAnimation(...)`` on the inherited ``animator`` field.
 ``who_uses(CharacterAnimator)`` returned 4 callers (CharacterBehaviour
@@ -26,7 +26,7 @@ from unitygraph.build.parsers.cs_parser import (
 
 
 def _make_call(receiver: str, method: str, line: int = 1) -> CallSite:
-    """Helper — synthesize an unresolved CallSite as the parser would."""
+    """Helper -- synthesize an unresolved CallSite as the parser would."""
     return CallSite(
         method=method,
         target=receiver,  # parser stashes receiver here when unresolved
@@ -85,7 +85,7 @@ def test_walks_multi_level_inheritance() -> None:
 
 def test_unknown_parent_leaves_call_unresolved() -> None:
     """If the chain hits a non-user base (e.g. external SDK class we
-    didn't parse), the receiver stays unresolved — but doesn't crash."""
+    didn't parse), the receiver stays unresolved -- but doesn't crash."""
     child = ClassInfo(name="Sub", namespace=None, base_class="ThirdPartyBase")
     child.unresolved_member_calls.append(_make_call("xyz", "Run"))
 
@@ -110,7 +110,7 @@ def test_handles_inheritance_cycle_without_infinite_loop() -> None:
 
 def test_does_not_clobber_already_resolved_calls() -> None:
     """Same-class field calls were already resolved by the parser into
-    field_method_calls — make sure the second pass doesn't duplicate them."""
+    field_method_calls -- make sure the second pass doesn't duplicate them."""
     klass = ClassInfo(name="Solo", namespace=None, base_class=None)
     existing_call = CallSite(
         method="Foo",

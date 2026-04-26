@@ -1,9 +1,9 @@
 """Deterministic graph queries (v1.6.0).
 
 These sit one abstraction level above ``tools.py``: they answer the
-questions a Unity dev actually asks — "who uses X?", "what's the blast
+questions a Unity dev actually asks -- "who uses X?", "what's the blast
 radius of changing Y?", "show me the Inspector overrides across all
-attachments" — and return results that include the underlying evidence
+attachments" -- and return results that include the underlying evidence
 ``sites`` when the graph carries them.
 
 The goal is to be the *reference oracle* any AI agent queries before
@@ -28,7 +28,7 @@ from unitygraph.build.graph import Edge, Graph, Node
 # to showing only user-owned scripts.
 #
 # Matching is done on the path's relative parts (OS-normalized by splitting
-# on both separators), not substring — so a file named
+# on both separators), not substring -- so a file named
 # ``Assets/MyPluginsHelper.cs`` is NOT treated as third-party just because
 # it contains the substring "Plugins".
 _THIRD_PARTY_SEGMENTS: frozenset[str] = frozenset(
@@ -63,7 +63,7 @@ def _is_user_script(node: Node) -> bool:
     * Node type is Script
     * ``external`` is not True (placeholder for unresolved guids)
     * ``file_path`` is under ``Assets/`` or under a user-embedded
-      ``Packages/<name>/`` — not under ``Library/`` or a third-party
+      ``Packages/<name>/`` -- not under ``Library/`` or a third-party
       asset-pack directory
     """
     if node.type != "Script":
@@ -104,16 +104,16 @@ def _sites_json(edge: Edge) -> list[dict[str, Any]]:
 
 
 def who_uses(graph: Graph, script_name: str) -> dict[str, Any]:
-    """Every inbound reference to ``script_name`` — who depends on it?
+    """Every inbound reference to ``script_name`` -- who depends on it?
 
     Covers four kinds of references, each with evidence sites when
     available:
 
-    * ``attached_to`` — scenes/prefabs attaching this script to a GameObject
-    * ``depends_on`` — other scripts calling ``GetComponent<Script>()``,
+    * ``attached_to`` -- scenes/prefabs attaching this script to a GameObject
+    * ``depends_on`` -- other scripts calling ``GetComponent<Script>()``,
       ``FindObjectOfType<Script>()``, or methods on fields typed as it
-    * ``inherits`` — subclasses
-    * ``subscribes_to`` — UnityEvent listeners whose callback lands here
+    * ``inherits`` -- subclasses
+    * ``subscribes_to`` -- UnityEvent listeners whose callback lands here
     """
     script_ids = _resolve_script_ids(graph, script_name)
     if not script_ids:
@@ -179,12 +179,12 @@ def who_uses(graph: Graph, script_name: str) -> dict[str, Any]:
 
 
 def impact_of(graph: Graph, script_name: str, *, hops: int = 2) -> dict[str, Any]:
-    """Blast radius — every node reachable *by* this script within ``hops``.
+    """Blast radius -- every node reachable *by* this script within ``hops``.
 
     Walks outbound ``depends_on`` + ``subscribes_to`` + ``inherits`` edges
     from each Script node, collecting reachable Scripts and GameObjects.
     Each entry carries the shortest hop distance and the edge type that
-    first reached it — useful for reviewing the scope of a refactor.
+    first reached it -- useful for reviewing the scope of a refactor.
     """
     if hops < 1:
         hops = 1
@@ -249,15 +249,15 @@ def find_singletons(
 ) -> dict[str, Any]:
     """Scripts attached to ``min_attachments`` or more GameObjects.
 
-    These are the "used everywhere" scripts — changing them has
+    These are the "used everywhere" scripts -- changing them has
     disproportionate reach. Results carry the full set of attachment
     sites so an agent can decide whether a rename is safe.
 
     ``user_only`` (default True) restricts results to scripts the
-    developer actually owns — drops Unity built-ins (Image, Button,
-    TextMeshPro, …), third-party asset packs (Feel, Plugins, Standard
+    developer actually owns -- drops Unity built-ins (Image, Button,
+    TextMeshPro, ...), third-party asset packs (Feel, Plugins, Standard
     Assets), and unresolved ``external`` placeholders. Set to False
-    to see every script regardless of ownership — useful when auditing
+    to see every script regardless of ownership -- useful when auditing
     a project you didn't write.
     """
     if min_attachments < 1:
@@ -367,7 +367,7 @@ def inspector_overrides_for(graph: Graph, script_name: str) -> dict[str, Any]:
 
 def _values_differ(default: Any, inspector: Any) -> bool:
     if default is None:
-        # Can't decide — treat anything non-default-looking as an override.
+        # Can't decide -- treat anything non-default-looking as an override.
         return inspector not in (None, "", 0, 0.0, False, [])
     a = str(default).rstrip("f").rstrip("F")
     b = str(inspector).rstrip("f").rstrip("F")
@@ -383,7 +383,7 @@ def field_wiring(graph: Graph, script_name: str, field_name: str) -> dict[str, A
     """Every place ``script_name.field_name`` is wired in scenes/prefabs.
 
     Covers UnityEvent wiring (``subscribes_to`` whose data.field matches)
-    and Inspector references. Useful when refactoring a field — the call
+    and Inspector references. Useful when refactoring a field -- the call
     sites in code are easy to find, but UnityEvent listeners live in YAML.
     """
     script_ids = _resolve_script_ids(graph, script_name)
@@ -449,7 +449,7 @@ def event_listeners(graph: Graph, script_name: str) -> dict[str, Any]:
 
 
 def find_missing_scripts(graph: Graph, *, min_attachments: int = 1) -> dict[str, Any]:
-    """Script nodes marked ``external=true`` — script_guid referenced but
+    """Script nodes marked ``external=true`` -- script_guid referenced but
     no matching .cs found.
 
     These usually indicate:
@@ -459,7 +459,7 @@ def find_missing_scripts(graph: Graph, *, min_attachments: int = 1) -> dict[str,
 
     ``min_attachments`` filters out placeholders with no live attachments
     (stale guids that won't actually show up in the Unity Editor). Default
-    is 1 — only report placeholders that are actually referenced by at
+    is 1 -- only report placeholders that are actually referenced by at
     least one GameObject.
     """
     if min_attachments < 0:

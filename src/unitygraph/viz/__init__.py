@@ -1,1 +1,1 @@
-"""UnityGraph Observatory — live reactive visualization of the knowledge graph."""
+"""UnityGraph Observatory -- live reactive visualization of the knowledge graph."""

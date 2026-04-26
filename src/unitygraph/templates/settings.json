@@ -1,5 +1,5 @@
 {
-  "_comment": "UnityGraph auto-rebuild hook. Fires once when Claude Code finishes a turn. `unitygraph build . --update` uses the incremental ParseCache so only changed files are re-parsed — typically 1-3s on a real project. The MCP server's GraphRef auto-reloads graph.json on the next tool call.",
+  "_comment": "UnityGraph auto-rebuild hook. Fires once when Claude Code finishes a turn. `unitygraph build . --update` uses the incremental ParseCache so only changed files are re-parsed -- typically 1-3s on a real project. The MCP server's GraphRef auto-reloads graph.json on the next tool call.",
   "hooks": {
     "Stop": [
       {

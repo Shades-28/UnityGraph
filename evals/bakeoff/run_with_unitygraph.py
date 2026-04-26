@@ -1,26 +1,28 @@
-"""Run B — WITH UNITYGRAPH.
+"""Run B -- WITH UNITYGRAPH.
 
 Answer each of the 8 bake-off questions using only the loaded
-graph.json + the queries module. No file reading, no grep — only
+graph.json + the queries module. No file reading, no grep -- only
 what UnityGraph offers.
 """
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 from unitygraph.build.graph import Graph
 from unitygraph.mcp import queries
 
-g = Graph.load(Path("D:/PR/Unity/clash.io/graph-out/graph.json"))
+EVAL_ROOT = Path(os.environ.get("UNITYGRAPH_EVAL_ROOT", "D:/PR/Unity"))
+g = Graph.load(EVAL_ROOT / "clash.io" / "graph-out" / "graph.json")
 
 
 def section(title: str) -> None:
     print(f"\n{'=' * 60}\n{title}\n{'=' * 60}")
 
 
-# Q1 — what does EnemyController.SpawnEnemy() do?
-section("Q1 — EnemyController.SpawnEnemy() body")
+# Q1 -- what does EnemyController.SpawnEnemy() do?
+section("Q1 -- EnemyController.SpawnEnemy() body")
 # UnityGraph stores method names + (after v1.4) call sites within methods,
 # but NOT method bodies. Find the Script node:
 ec = next(
@@ -50,8 +52,8 @@ if ec:
         print(f"  - {s['kind']} -> {s['to']}: {s['snippet']}")
 
 
-# Q2 — EnemyBase inheritance
-section("Q2 — EnemyBase base class")
+# Q2 -- EnemyBase inheritance
+section("Q2 -- EnemyBase base class")
 eb = next(
     (n for n in g.nodes if n.type == "Script" and n.data.get("name") == "EnemyBase"),
     None,
@@ -60,8 +62,8 @@ if eb:
     print(f"base_class: {eb.data.get('base_class')}")
 
 
-# Q3 — who calls GetComponent<EnemyBase>()
-section("Q3 — callers of GetComponent<EnemyBase>")
+# Q3 -- who calls GetComponent<EnemyBase>()
+section("Q3 -- callers of GetComponent<EnemyBase>")
 result = queries.who_uses(g, "EnemyBase")
 gc_callers = []
 for dep in result.get("depended_on_by", []):
@@ -81,8 +83,8 @@ for c in gc_callers:
     print(f"    {c['snippet']}")
 
 
-# Q4 — CharacterBehaviour -> CharacterAnimator method-call count
-section("Q4 — CharacterBehaviour method calls on CharacterAnimator")
+# Q4 -- CharacterBehaviour -> CharacterAnimator method-call count
+section("Q4 -- CharacterBehaviour method calls on CharacterAnimator")
 count = 0
 for e in g.edges:
     fn = next((n for n in g.nodes if n.id == e.from_id), None)
@@ -101,8 +103,8 @@ for e in g.edges:
 print(f"TOTAL method_call sites: {count}")
 
 
-# Q5 — spawnRadius Inspector override on EnemyController
-section("Q5 — EnemyController Inspector overrides (looking for spawnRadius)")
+# Q5 -- spawnRadius Inspector override on EnemyController
+section("Q5 -- EnemyController Inspector overrides (looking for spawnRadius)")
 result = queries.inspector_overrides_for(g, "EnemyController")
 for att in result.get("attachments", []):
     for ov in att["overrides"]:
@@ -115,8 +117,8 @@ for att in result.get("attachments", []):
             )
 
 
-# Q6 — UnityEvent listeners on RateUsScript
-section("Q6 — UnityEvent listeners on RateUsScript")
+# Q6 -- UnityEvent listeners on RateUsScript
+section("Q6 -- UnityEvent listeners on RateUsScript")
 result = queries.event_listeners(g, "RateUsScript")
 methods = sorted({lst["method"] for lst in result.get("listeners", [])})
 print(f"distinct methods: {methods}")
@@ -126,17 +128,17 @@ for lst in result.get("listeners", []):
     print(f"  - .{lst['method']} (field={lst.get('field')}) @ {site.get('file')}:{site.get('line')}")
 
 
-# Q7 — missing scripts
-section("Q7 — missing scripts")
+# Q7 -- missing scripts
+section("Q7 -- missing scripts")
 result = queries.find_missing_scripts(g)
 print(f"count: {result['count']}")
 print("top 5 by attachment count:")
 for m in result["missing_scripts"][:5]:
-    print(f"  - guid={m['guid'][:8]}…  attached_to={m['attachment_count']} GameObjects")
+    print(f"  - guid={m['guid'][:8]}...  attached_to={m['attachment_count']} GameObjects")
 
 
-# Q8 — rename CharacterAnimator.SetAnimation
-section("Q8 — rename CharacterAnimator.SetAnimation impact")
+# Q8 -- rename CharacterAnimator.SetAnimation
+section("Q8 -- rename CharacterAnimator.SetAnimation impact")
 
 # Code callers via depends_on edges with method_call sites mentioning SetAnimation
 code_callers = []

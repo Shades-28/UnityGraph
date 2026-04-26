@@ -1,4 +1,4 @@
-"""Tests for Layer 3 adaptive injection — matcher + engine integration."""
+"""Tests for Layer 3 adaptive injection -- matcher + engine integration."""
 
 from __future__ import annotations
 

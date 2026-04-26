@@ -6,7 +6,7 @@ tool without spinning up an actual MCP server. The server module
 as MCP tools.
 
 Naming:
-* ``graph`` — the loaded ``Graph`` object.
+* ``graph`` -- the loaded ``Graph`` object.
 * ``name`` parameters match how a developer refers to things in a task
   (GameObject name, script class name, prefab name). Matching is
   case-insensitive and tolerant of spaces.
@@ -90,7 +90,7 @@ def get_components(graph: Graph, gameobject_name: str) -> dict[str, Any]:
 def get_inspector_values(graph: Graph, component_name: str, gameobject_name: str) -> dict[str, Any]:
     """Inspector-set values for ``component_name`` on ``gameobject_name``.
 
-    For scripts this is the source of truth — Inspector values override
+    For scripts this is the source of truth -- Inspector values override
     code defaults, which is exactly the context Claude Code usually lacks.
     """
     go_matches = _gameobject_nodes(graph, gameobject_name)
@@ -154,7 +154,7 @@ def get_inspector_values(graph: Graph, component_name: str, gameobject_name: str
 
 
 def get_scene_graph(graph: Graph, scene_name: str) -> dict[str, Any]:
-    """Full GameObject list for ``scene_name`` (flat — hierarchy in I3)."""
+    """Full GameObject list for ``scene_name`` (flat -- hierarchy in I3)."""
     key = _norm(scene_name)
     scene_node = None
     for n in graph.nodes:
@@ -376,7 +376,7 @@ def query_graph(
     Extracts PascalCase/snake_case tokens from the query, matches them against
     node names, then returns the 2-hop neighborhood of the best matches,
     capped at ``max_nodes``. A real retrieval engine (entity-hop / task-type /
-    full-neighborhood) lives in Layer 2 — this is the minimal MCP tool so
+    full-neighborhood) lives in Layer 2 -- this is the minimal MCP tool so
     Claude Code can reach the graph during early sessions.
     """
     import re

@@ -3,16 +3,16 @@
 For each graph.json, count the hidden-from-code-only evidence that
 UnityGraph exposes but a code-only AI cannot see:
 
-1. Inspector overrides — serialized fields where the scene/prefab value
+1. Inspector overrides -- serialized fields where the scene/prefab value
    differs from the code default in the attached Script.
-2. UnityEvent wirings — subscribes_to edges, which exist only in scene
+2. UnityEvent wirings -- subscribes_to edges, which exist only in scene
    YAML's m_PersistentCalls (invisible in C# source).
-3. Script attachments — Script nodes attached to GameObjects. A code-only
+3. Script attachments -- Script nodes attached to GameObjects. A code-only
    reader knows the script exists; it doesn't know which scene instances
    use it.
-4. Prefab variants with overrides — variant chains and per-field
+4. Prefab variants with overrides -- variant chains and per-field
    divergence, again invisible in source.
-5. Execution-order overrides — MonoManager-set, not in source.
+5. Execution-order overrides -- MonoManager-set, not in source.
 
 Print real numbers. No hand-waving.
 """
@@ -141,16 +141,16 @@ def main() -> int:
             Path(__file__).parents[2] / "fixtures/MiniUnityProject/graph-out/graph.json",
         ),
         (
-            "Indian-Bike-Gangster",
+            "MidsizeProject-Gangster",
             Path("C:/Users/aryan/AppData/Local/Temp/ug-indian-bike/graph.json"),
         ),
         ("clash.io", Path("C:/Users/aryan/AppData/Local/Temp/ug-clash/graph.json")),
-        ("Graudation-Saga", Path("C:/Users/aryan/AppData/Local/Temp/ug-grad/graph.json")),
+        ("LargeProject", Path("C:/Users/aryan/AppData/Local/Temp/ug-grad/graph.json")),
     ]
 
     for label, path in targets:
         if not path.exists():
-            print(f"\n=== {label} — graph.json missing at {path}, skipping ===")
+            print(f"\n=== {label} -- graph.json missing at {path}, skipping ===")
             continue
         print(f"\n{'=' * 72}")
         print(f" {label}")

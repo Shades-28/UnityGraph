@@ -8,13 +8,15 @@ Outputs candidates we can build questions around.
 """
 from __future__ import annotations
 
+import os
 from collections import defaultdict
 from pathlib import Path
 
 from unitygraph.build.graph import Graph
 from unitygraph.mcp import queries
 
-GRAPH_PATH = Path("D:/PR/Unity/clash.io/graph-out/graph.json")
+EVAL_ROOT = Path(os.environ.get("UNITYGRAPH_EVAL_ROOT", "D:/PR/Unity"))
+GRAPH_PATH = EVAL_ROOT / "clash.io" / "graph-out" / "graph.json"
 
 
 def is_game_script(node) -> bool:
@@ -74,15 +76,15 @@ def main() -> None:
             override_counts.append((result["overridden_attachments"], n))
     override_counts.sort(key=lambda x: x[0], reverse=True)
     for cnt, n in override_counts[:8]:
-        print(f"  {cnt:>3} attachments with overrides — {n.data.get('name')}")
+        print(f"  {cnt:>3} attachments with overrides -- {n.data.get('name')}")
 
     # Find missing scripts attached to GameObjects
     print("\nMissing scripts (top 5 by attachment):")
     missing = queries.find_missing_scripts(g)
     for m in missing["missing_scripts"][:5]:
-        print(f"  guid={m['guid'][:8]}…  attachments={m['attachment_count']}  path={m['suspected_path']}")
+        print(f"  guid={m['guid'][:8]}...  attachments={m['attachment_count']}  path={m['suspected_path']}")
 
-    # Subscribes_to from game scripts — pick one with site
+    # Subscribes_to from game scripts -- pick one with site
     print("\nGame-script UnityEvent wirings:")
     for e in g.edges:
         if e.type != "subscribes_to":

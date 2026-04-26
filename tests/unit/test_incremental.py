@@ -24,7 +24,7 @@ def test_parse_cache_round_trip(tmp_path):
     reloaded = ParseCache.load(cache_dir)
     assert set(reloaded.entries) == set(cache.entries)
 
-    # Second build reuses cache — graph stats must still match.
+    # Second build reuses cache -- graph stats must still match.
     second = build_project(FIXTURE, cache=reloaded)
     assert len(second.graph.nodes) > 0
     assert len(second.graph.edges) > 0

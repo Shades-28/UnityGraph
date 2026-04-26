@@ -1,12 +1,14 @@
 """Find a clash.io script with concrete (scalar) Inspector overrides
 where code default and scene value differ on a primitive.
 """
+import os
 from pathlib import Path
 
 from unitygraph.build.graph import Graph
 from unitygraph.mcp import queries
 
-GRAPH = Graph.load(Path("D:/PR/Unity/clash.io/graph-out/graph.json"))
+EVAL_ROOT = Path(os.environ.get("UNITYGRAPH_EVAL_ROOT", "D:/PR/Unity"))
+GRAPH = Graph.load(EVAL_ROOT / "clash.io" / "graph-out" / "graph.json")
 
 
 def main() -> None:

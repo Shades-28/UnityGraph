@@ -1,6 +1,6 @@
 """Graph model + JSON (de)serialization.
 
-Schema (graph.json v1.2) — additive since v1.0.
+Schema (graph.json v1.2) -- additive since v1.0.
 
 Node types: Script, GameObject, Component, Scene, Prefab, AnimState,
             AnimatorController, ShaderGraph, Rationale.
@@ -57,7 +57,7 @@ EdgeType = Literal[
     "explains",
 ]
 
-# The ``kind`` of evidence a Site represents. Keep this tightly enumerated —
+# The ``kind`` of evidence a Site represents. Keep this tightly enumerated --
 # downstream queries pattern-match on these.
 SiteKind = Literal[
     "get_component",
@@ -84,7 +84,7 @@ Confidence = Literal["EXTRACTED", "INFERRED", "AMBIGUOUS"]
 class Site:
     """One source-level justification for an edge.
 
-    Follows the Roslyn ``ReferenceLocation`` shape — one logical edge can
+    Follows the Roslyn ``ReferenceLocation`` shape -- one logical edge can
     carry many sites, each pointing at a distinct file+line where the
     relationship is observable.
     """

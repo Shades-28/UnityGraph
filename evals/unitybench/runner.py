@@ -1,4 +1,4 @@
-"""UnityBench runner — drives (task, condition, model) trials through Claude.
+"""UnityBench runner -- drives (task, condition, model) trials through Claude.
 
 Uses the Anthropic SDK with prompt caching on the shared system prompt, since
 every trial in a run shares the same instruction block (only the per-task user
@@ -53,7 +53,7 @@ def build_prompt(task: Task, condition: str) -> tuple[str, int]:
         return prompt, 0
     if condition == "manual_visual":
         prompt = build_condition_manual_visual(task)
-        return prompt, 0  # Not counted — it's an "oracle" human proxy.
+        return prompt, 0  # Not counted -- it's an "oracle" human proxy.
     if condition in ("unitygraph", "unitygraph_adaptive"):
         from unitygraph.build.graph import Graph
         from unitygraph.inject.engine import inject_context

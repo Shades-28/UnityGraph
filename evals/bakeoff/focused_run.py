@@ -1,11 +1,11 @@
 """Focused 8-question bake-off across all three projects.
 
 The 8 questions chosen are the ones that meaningfully differentiated
-UnityGraph from baseline on clash.io. Run them on Graudation-Saga and
-Indian Bike to see if the result holds at scale.
+UnityGraph from baseline on clash.io. Run them on LargeProject and
+MidsizeProject to see if the result holds at scale.
 
 Each question has a deterministic UnityGraph answer. The baseline
-"answer" is a *cost estimate* — how many tool calls (grep/read/glob)
+"answer" is a *cost estimate* -- how many tool calls (grep/read/glob)
 a Claude agent would need to produce the same answer, and whether
 the answer would be confidently correct, hedged, or wrong.
 
@@ -15,16 +15,20 @@ the absolute number.
 from __future__ import annotations
 
 import json
+import os
 from collections import defaultdict
 from pathlib import Path
 
 from unitygraph.build.graph import Graph
 from unitygraph.mcp import queries
 
+# Override via UNITYGRAPH_EVAL_ROOT to point at your local Unity-project corpus.
+# Default works on the original author's machine; everyone else must set the var.
+EVAL_ROOT = Path(os.environ.get("UNITYGRAPH_EVAL_ROOT", "D:/PR/Unity"))
 PROJECTS = {
-    "clash.io": Path("D:/PR/Unity/clash.io"),
-    "Indian Bike": Path("D:/PR/Unity/Indian Bike"),
-    "Graudation-Saga": Path("D:/PR/Unity/Graudation-Saga"),
+    "clash.io": EVAL_ROOT / "clash.io",
+    "MidsizeProject": EVAL_ROOT / "MidsizeProject",
+    "LargeProject": EVAL_ROOT / "LargeProject",
 }
 
 
@@ -38,7 +42,7 @@ def run_project(name: str, root: Path) -> dict:
 
     out: dict = {"project": name}
 
-    # Q5-style — Inspector overrides (find a script with the most scalar overrides)
+    # Q5-style -- Inspector overrides (find a script with the most scalar overrides)
     print("\n--- Q5: Inspector overrides ---")
     user = [n for n in g.nodes if queries._is_user_script(n)]
     best_script = None
@@ -60,7 +64,7 @@ def run_project(name: str, root: Path) -> dict:
     print(f"  best script with scalar overrides: {best_script} ({best_count} overrides)")
     out["q5_inspector"] = {"script": best_script, "scalar_overrides": best_count}
 
-    # Q6-style — UnityEvent listeners
+    # Q6-style -- UnityEvent listeners
     print("\n--- Q6: UnityEvent landings ---")
     listener_totals = []
     for n in user[:300]:
@@ -76,13 +80,13 @@ def run_project(name: str, root: Path) -> dict:
         "top": listener_totals[:5],
     }
 
-    # Q7 — missing scripts
+    # Q7 -- missing scripts
     print("\n--- Q7: missing scripts ---")
     missing = queries.find_missing_scripts(g, min_attachments=10)
     print(f"  missing-script placeholders with >=10 attachments: {missing['count']}")
     out["q7_missing"] = {"count": missing["count"]}
 
-    # Q8/Q15 — inheritance: subclasses of any user-base
+    # Q8/Q15 -- inheritance: subclasses of any user-base
     print("\n--- Q8/Q15: user-base inheritance pairs ---")
     user_names = {n.data.get("name") for n in user}
     inh_pairs = [
@@ -94,7 +98,7 @@ def run_project(name: str, root: Path) -> dict:
     print(f"  user-base inheritance pairs: {len(inh_pairs)}")
     out["q8_inheritance_pairs"] = len(inh_pairs)
 
-    # Q10 — List<UserType> field declarations
+    # Q10 -- List<UserType> field declarations
     print("\n--- Q10: List<UserType> ---")
     list_user_count = 0
     for n in user:
@@ -107,7 +111,7 @@ def run_project(name: str, root: Path) -> dict:
     print(f"  List<UserType> field declarations: {list_user_count}")
     out["q10_list_usertype"] = list_user_count
 
-    # Q13 — most-attached user script — how many distinct scopes?
+    # Q13 -- most-attached user script -- how many distinct scopes?
     print("\n--- Q13: scopes for top user-singleton ---")
     sing = queries.find_singletons(g, min_attachments=2, user_only=True)
     if sing["singletons"]:
@@ -124,7 +128,7 @@ def run_project(name: str, root: Path) -> dict:
         print("  no user singletons")
         out["q13_top_singleton"] = None
 
-    # Q15 — pick the heaviest-used user-base inheritance pair
+    # Q15 -- pick the heaviest-used user-base inheritance pair
     print("\n--- Q15: subclasses of a user base ---")
     base_to_subs = defaultdict(list)
     for child, parent in inh_pairs:
@@ -139,7 +143,7 @@ def run_project(name: str, root: Path) -> dict:
     else:
         out["q15_inheritance"] = None
 
-    # Q16 — string-based dispatch (UnityGraph CAN'T track this — honest)
+    # Q16 -- string-based dispatch (UnityGraph CAN'T track this -- honest)
     print("\n--- Q16: string-based dispatch (UnityGraph: out-of-scope) ---")
     out["q16"] = "out-of-scope (UnityGraph honest)"
 

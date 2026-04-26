@@ -1,19 +1,21 @@
 """Run B (UnityGraph) on the 8 v2 adversarial questions. clash.io.
 
 Each block answers one question by calling only queries.py + reading
-graph.json. Reports what UnityGraph CAN return — even if "I don't track
+graph.json. Reports what UnityGraph CAN return -- even if "I don't track
 this" is the honest answer, that's the answer.
 """
 from __future__ import annotations
 
 import json
+import os
 from collections import Counter, defaultdict
 from pathlib import Path
 
 from unitygraph.build.graph import Graph
 from unitygraph.mcp import queries
 
-g = Graph.load(Path("D:/PR/Unity/clash.io/graph-out/graph.json"))
+EVAL_ROOT = Path(os.environ.get("UNITYGRAPH_EVAL_ROOT", "D:/PR/Unity"))
+g = Graph.load(EVAL_ROOT / "clash.io" / "graph-out" / "graph.json")
 
 
 def section(t: str) -> None:
@@ -21,7 +23,7 @@ def section(t: str) -> None:
 
 
 # Q9: property vs field on EnemyBase
-section("Q9 — EnemyBase: property/field 'Health'?")
+section("Q9 -- EnemyBase: property/field 'Health'?")
 eb = next(
     (n for n in g.nodes if n.type == "Script" and n.data.get("name") == "EnemyBase"),
     None,
@@ -39,7 +41,7 @@ if eb:
 
 
 # Q10: List<T> where T is user-defined
-section("Q10 — List<UserType> declarations")
+section("Q10 -- List<UserType> declarations")
 user_class_names = {n.data.get("name") for n in g.nodes if n.type == "Script"}
 matches = []
 for n in g.nodes:
@@ -65,7 +67,7 @@ for m in matches[:10]:
 
 
 # Q11: async methods
-section("Q11 — async methods (UnityGraph view)")
+section("Q11 -- async methods (UnityGraph view)")
 # UnityGraph's MethodInfo records name + line + lifecycle, not return type.
 # So this is a HONEST FAILURE case.
 print("UnityGraph's MethodInfo does NOT record method return types.")
@@ -73,7 +75,7 @@ print("Cannot determine async/Task methods from the graph alone.")
 
 
 # Q12: IPointerClickHandler implementations
-section("Q12 — IPointerClickHandler implementers")
+section("Q12 -- IPointerClickHandler implementers")
 hits = []
 for n in g.nodes:
     if n.type != "Script":
@@ -92,7 +94,7 @@ for h in hits:
 
 
 # Q13: scenes/prefabs referencing CharacterAnimator
-section("Q13 — Scopes referencing CharacterAnimator")
+section("Q13 -- Scopes referencing CharacterAnimator")
 result = queries.who_uses(g, "CharacterAnimator")
 scopes = set()
 for att in result.get("attached_to", []):
@@ -105,7 +107,7 @@ for s in sorted(scopes):
 
 
 # Q14: Inspector overrides on EnemyController in DevScene
-section("Q14 — EnemyController scalar overrides")
+section("Q14 -- EnemyController scalar overrides")
 result = queries.inspector_overrides_for(g, "EnemyController")
 scalar = []
 for att in result.get("attachments", []):
@@ -120,7 +122,7 @@ for ov in scalar:
 
 
 # Q15: subclasses of EnemyBase + their depends_on
-section("Q15 — Subclasses of EnemyBase + depends_on relationships")
+section("Q15 -- Subclasses of EnemyBase + depends_on relationships")
 subs = [
     n
     for n in g.nodes
@@ -143,7 +145,7 @@ for sub in subs:
 
 
 # Q16: SendMessage / BroadcastMessage / Invoke string dispatch
-section("Q16 — String-based dispatch (SendMessage/BroadcastMessage/Invoke)")
+section("Q16 -- String-based dispatch (SendMessage/BroadcastMessage/Invoke)")
 print("UnityGraph does not track string-based dispatch.")
 print("These calls produce no edges in the graph since the target is a")
 print("string literal at runtime, resolved by Unity, not the C# parser.")
