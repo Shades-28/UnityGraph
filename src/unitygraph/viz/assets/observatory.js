@@ -48,6 +48,7 @@ const state = {
   nodeTimestamps: new Map(),
   graphInstance: null,
   sse: null,
+  scope: "user",          // "user" (default — usable on huge projects) or "all"
 };
 
 /* -------------------------------------------------------------------------
@@ -272,7 +273,8 @@ resize();
    ------------------------------------------------------------------------- */
 
 async function fetchGraph() {
-  const resp = await fetch("/graph.json");
+  const scope = state.scope || "user";
+  const resp = await fetch(`/graph.json?scope=${encodeURIComponent(scope)}`);
   if (!resp.ok) throw new Error("graph fetch failed");
   return await resp.json();
 }
@@ -358,11 +360,34 @@ function renderChrome() {
 
   // Stats
   const stats = state.graph?.stats || {};
+  const totals = state.graph?.totals || {};
+  const filter = state.graph?.filter || {};
+  const shownNodes = state.graph?.nodes?.length ?? stats.n_nodes;
+  const shownLinks = state.graph?.links?.length ?? stats.n_edges;
+  const nodeLabel = filter.applied
+    ? `${formatNum(shownNodes)} <span class="stat-dim">/ ${formatNum(stats.n_nodes)}</span>`
+    : formatNum(stats.n_nodes);
+  const edgeLabel = filter.applied
+    ? `${formatNum(shownLinks)} <span class="stat-dim">/ ${formatNum(stats.n_edges)}</span>`
+    : formatNum(stats.n_edges);
   document.getElementById("stats").innerHTML = `
-    <span class="stat-item"><span>nodes</span><span class="stat-value">${formatNum(stats.n_nodes)}</span></span>
-    <span class="stat-item"><span>edges</span><span class="stat-value">${formatNum(stats.n_edges)}</span></span>
+    <span class="stat-item"><span>nodes</span><span class="stat-value">${nodeLabel}</span></span>
+    <span class="stat-item"><span>edges</span><span class="stat-value">${edgeLabel}</span></span>
     <span class="stat-item"><span>build</span><span class="stat-value">${stats.build_ms ?? 0}ms</span></span>
   `;
+
+  // Scope note
+  const note = document.getElementById("scope-note");
+  if (note) {
+    if (filter.scope === "user" && filter.applied) {
+      const truncSuffix = filter.truncated
+        ? ` <span class="warn">capped at ${formatNum(filter.max_nodes)}</span>`
+        : "";
+      note.innerHTML = `showing ${formatNum(shownNodes)} of ${formatNum(stats.n_nodes)} nodes${truncSuffix}`;
+    } else {
+      note.textContent = `showing all ${formatNum(stats.n_nodes)} nodes`;
+    }
+  }
 
   // Legend
   const counts = {};
@@ -639,6 +664,24 @@ document.getElementById("filter-external").addEventListener("change", (e) => {
   state.filterExternal = e.target.checked;
   if (state.forceData) fg.graphData(state.forceData);
 });
+
+// Scope toggle — refetches the graph with a different ?scope=... so huge
+// projects can start narrow and opt into the full view.
+for (const id of ["scope-user", "scope-all"]) {
+  document.getElementById(id).addEventListener("change", async (e) => {
+    if (!e.target.checked) return;
+    state.scope = e.target.value;
+    document.getElementById("scope-note").textContent = "loading...";
+    try {
+      const graph = await fetchGraph();
+      applyGraph(graph);
+      fg.zoomToFit(900, 80);
+    } catch (err) {
+      console.error("scope switch failed:", err);
+      document.getElementById("scope-note").textContent = "failed to load";
+    }
+  });
+}
 
 /* -------------------------------------------------------------------------
    Control buttons

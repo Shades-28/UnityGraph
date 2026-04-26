@@ -22,6 +22,7 @@ import queue
 import socket
 import threading
 import time
+import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -34,6 +35,87 @@ ASSETS_DIR = Path(__file__).parent / "assets"
 # ---------------------------------------------------------------------------
 # Graph transformation — our graph.json shape -> react-force-graph-friendly
 # ---------------------------------------------------------------------------
+
+
+_THIRD_PARTY_SEGMENTS: frozenset[str] = frozenset(
+    {
+        "Plugins",
+        "Feel",
+        "ThirdParty",
+        "Third Party",
+        "Standard Assets",
+        "Samples",
+        "Editor Default Resources",
+        "Examples & Extras",
+    }
+)
+
+
+def _is_user_script_data(data: dict[str, Any]) -> bool:
+    """Mirrors mcp.queries._is_user_script for raw node-data dicts.
+
+    Duplicated here (rather than imported) to keep viz independent of
+    the mcp module — the viz/ subtree is the public web surface and
+    must not pull in MCP server transport code.
+    """
+    if data.get("external") is True:
+        return False
+    fp = str(data.get("file_path") or "")
+    if not fp:
+        return False
+    parts = [p for p in fp.replace("\\", "/").split("/") if p]
+    if not parts or "Library" in parts:
+        return False
+    if _THIRD_PARTY_SEGMENTS & set(parts):
+        return False
+    return parts[0] in {"Assets", "Packages"}
+
+
+def _filter_user_scope(
+    nodes: list[dict[str, Any]],
+    links: list[dict[str, Any]],
+    *,
+    max_nodes: int,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], bool]:
+    """Return a subgraph keyed on user-owned Scripts plus 1-hop neighbors.
+
+    Returns (filtered_nodes, filtered_links, truncated). The flag is True
+    when ``max_nodes`` forced us to drop low-degree nodes; the UI surfaces
+    this so the user can switch to scope=all if they really want everything.
+    """
+    user_script_ids = {
+        n["id"]
+        for n in nodes
+        if n.get("type") == "Script" and _is_user_script_data(n.get("meta") or {})
+    }
+    if not user_script_ids:
+        return nodes, links, False
+
+    # 1-hop neighborhood — every node directly connected to a user script.
+    keep = set(user_script_ids)
+    for link in links:
+        src = link["source"]
+        dst = link["target"]
+        if src in user_script_ids or dst in user_script_ids:
+            keep.add(src)
+            keep.add(dst)
+
+    truncated = False
+    if len(keep) > max_nodes:
+        # Trim by degree, but always keep user scripts (the seed of the view).
+        kept_nodes = [n for n in nodes if n["id"] in keep]
+        kept_nodes.sort(
+            key=lambda n: (n["id"] in user_script_ids, n.get("degree", 0)),
+            reverse=True,
+        )
+        keep = {n["id"] for n in kept_nodes[:max_nodes]}
+        truncated = True
+
+    f_nodes = [n for n in nodes if n["id"] in keep]
+    f_links = [
+        link for link in links if link["source"] in keep and link["target"] in keep
+    ]
+    return f_nodes, f_links, truncated
 
 
 def transform_graph(graph_path: Path) -> dict[str, Any]:
@@ -249,7 +331,32 @@ class _Handler(BaseHTTPRequestHandler):
             self._serve_file(target, mime or "application/octet-stream")
             return
         if path == "/graph.json":
+            qs = urllib.parse.parse_qs(self.path.split("?", 1)[1]) if "?" in self.path else {}
+            scope = (qs.get("scope") or ["all"])[0]
+            try:
+                max_nodes = int((qs.get("max_nodes") or ["8000"])[0])
+            except ValueError:
+                max_nodes = 8000
+
             payload = transform_graph(self.graph_path)
+            payload["filter"] = {"scope": scope, "max_nodes": max_nodes}
+            payload["totals"] = {
+                "n_nodes": len(payload["nodes"]),
+                "n_links": len(payload["links"]),
+            }
+
+            if scope == "user":
+                nodes, links, truncated = _filter_user_scope(
+                    payload["nodes"], payload["links"], max_nodes=max_nodes
+                )
+                payload["nodes"] = nodes
+                payload["links"] = links
+                payload["filter"]["truncated"] = truncated
+                payload["filter"]["applied"] = True
+            else:
+                payload["filter"]["truncated"] = False
+                payload["filter"]["applied"] = False
+
             self._send(
                 200,
                 json.dumps(payload).encode("utf-8"),

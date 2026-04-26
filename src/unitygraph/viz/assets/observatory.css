@@ -711,3 +711,16 @@ summary::-webkit-details-marker { display: none; }
   font-style: italic;
   margin: 6px 0 0;
 }
+
+/* Scope filter note + ratio styling */
+.stat-dim { color: var(--fg-dim); font-weight: 400; }
+.filter-note {
+  font-size: 11px;
+  color: var(--fg-dim);
+  margin: 6px 0 0;
+  line-height: 1.4;
+}
+.filter-note .warn {
+  color: var(--type-Script, #FF8C42);
+  font-weight: 600;
+}

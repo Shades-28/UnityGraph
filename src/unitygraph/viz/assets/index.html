@@ -41,6 +41,18 @@
       <summary>node types</summary>
       <ul id="legend-list"></ul>
     </details>
+    <details class="filters" open>
+      <summary>scope</summary>
+      <label class="switch">
+        <input type="radio" name="scope" id="scope-user" value="user" checked>
+        <span>user scripts + neighbors</span>
+      </label>
+      <label class="switch">
+        <input type="radio" name="scope" id="scope-all" value="all">
+        <span>full graph (slow on big projects)</span>
+      </label>
+      <p class="filter-note" id="scope-note"></p>
+    </details>
     <details class="filters">
       <summary>filters</summary>
       <label class="switch">

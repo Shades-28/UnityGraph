@@ -89,6 +89,72 @@ def test_watcher_notifies_subscribers_on_mtime_change(mini_graph):
         watcher.stop()
 
 
+def test_filter_user_scope_keeps_user_scripts_and_neighbors():
+    """v2.1.1 unit test for the scope filter: a user script + its 1-hop
+    neighbors are kept; an unrelated third-party island is dropped."""
+    from unitygraph.viz.server import _filter_user_scope
+
+    nodes = [
+        {"id": "user", "type": "Script", "degree": 2,
+         "meta": {"file_path": "Assets/Scripts/My.cs"}},
+        {"id": "go1", "type": "GameObject", "degree": 1, "meta": {}},
+        {"id": "external", "type": "Script", "degree": 1,
+         "meta": {"file_path": "Library/PackageCache/x/Y.cs", "external": True}},
+        {"id": "third_party", "type": "Script", "degree": 1,
+         "meta": {"file_path": "Assets/Plugins/Sdk/A.cs"}},
+        {"id": "isolated_go", "type": "GameObject", "degree": 1, "meta": {}},
+    ]
+    links = [
+        {"source": "user", "target": "go1", "type": "attached_to"},
+        {"source": "external", "target": "isolated_go", "type": "attached_to"},
+        {"source": "third_party", "target": "isolated_go", "type": "attached_to"},
+    ]
+    f_nodes, f_links, truncated = _filter_user_scope(nodes, links, max_nodes=10)
+    kept_ids = {n["id"] for n in f_nodes}
+    assert kept_ids == {"user", "go1"}
+    assert len(f_links) == 1
+    assert truncated is False
+
+
+def test_filter_user_scope_truncates_when_over_cap():
+    """If the 1-hop neighborhood exceeds max_nodes, trim by degree but
+    always keep the user-script seed."""
+    from unitygraph.viz.server import _filter_user_scope
+
+    nodes = [
+        {"id": "user", "type": "Script", "degree": 100,
+         "meta": {"file_path": "Assets/Scripts/My.cs"}},
+    ]
+    links = []
+    for i in range(20):
+        nid = f"go{i}"
+        nodes.append({"id": nid, "type": "GameObject", "degree": i, "meta": {}})
+        links.append({"source": "user", "target": nid, "type": "attached_to"})
+
+    f_nodes, _f_links, truncated = _filter_user_scope(nodes, links, max_nodes=5)
+    assert truncated is True
+    assert len(f_nodes) == 5
+    # User script must always survive the cap.
+    assert any(n["id"] == "user" for n in f_nodes)
+
+
+def test_filter_user_scope_no_user_scripts_returns_all():
+    """If no user scripts exist (all third-party project), return full
+    graph rather than an empty view."""
+    from unitygraph.viz.server import _filter_user_scope
+
+    nodes = [
+        {"id": "ext", "type": "Script", "degree": 1,
+         "meta": {"file_path": "Library/X.cs", "external": True}},
+        {"id": "go", "type": "GameObject", "degree": 1, "meta": {}},
+    ]
+    links = [{"source": "ext", "target": "go", "type": "attached_to"}]
+    f_nodes, f_links, truncated = _filter_user_scope(nodes, links, max_nodes=10)
+    assert len(f_nodes) == 2
+    assert len(f_links) == 1
+    assert truncated is False
+
+
 def test_http_graph_endpoint_serves_payload(mini_graph):
     server, port = run_server(mini_graph, port=17842)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -99,6 +165,40 @@ def test_http_graph_endpoint_serves_payload(mini_graph):
             payload = json.loads(resp.read())
         assert payload["stats"]["n_nodes"] > 0
         assert any(n["type"] == "Script" for n in payload["nodes"])
+    finally:
+        server.shutdown()
+        thread.join(timeout=2)
+
+
+def test_http_graph_endpoint_filters_user_scope(mini_graph):
+    """v2.1.1: ?scope=user must trim down to user-script subgraph and
+    report filter metadata; ?scope=all must keep the full graph."""
+    server, port = run_server(mini_graph, port=17847)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        with urllib.request.urlopen(
+            f"http://127.0.0.1:{port}/graph.json?scope=user", timeout=2
+        ) as resp:
+            user_payload = json.loads(resp.read())
+        with urllib.request.urlopen(
+            f"http://127.0.0.1:{port}/graph.json?scope=all", timeout=2
+        ) as resp:
+            all_payload = json.loads(resp.read())
+
+        # Both responses report total counts; user payload reports filter
+        # applied=true, all reports applied=false.
+        assert user_payload["filter"]["scope"] == "user"
+        assert user_payload["filter"]["applied"] is True
+        assert all_payload["filter"]["scope"] == "all"
+        assert all_payload["filter"]["applied"] is False
+
+        # Filtered set must be a subset (or equal, on tiny fixtures) of full set.
+        assert len(user_payload["nodes"]) <= len(all_payload["nodes"])
+        assert len(user_payload["links"]) <= len(all_payload["links"])
+
+        # Totals always reflect the unfiltered graph regardless of scope.
+        assert user_payload["totals"]["n_nodes"] == all_payload["totals"]["n_nodes"]
     finally:
         server.shutdown()
         thread.join(timeout=2)
